@@ -475,6 +475,7 @@ Environment="DATABASE_PATH=$DATA_DIR/database/vps-panel.db"
 Environment="PROJECTS_DIR=$DATA_DIR/projects"
 Environment="PORT=$PANEL_PORT"
 Environment="OAUTH_CALLBACK_URL=$OAUTH_CALLBACK_URL"
+Environment="CADDY_CONFIG_PATH=$DATA_DIR/caddy"
 
 [Install]
 WantedBy=multi-user.target
