@@ -125,8 +125,15 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		s.logBuild(deployment.ID, fmt.Sprintf("Using subdirectory: %s", project.RootDirectory), "info")
 	}
 
-	// Step 2: Detect framework and generate Dockerfile if needed
+	// Step 2: Detect framework and prepare for deployment
 	s.logBuild(deployment.ID, "Detecting project structure...", "info")
+
+	// For SvelteKit projects, ensure they have adapter-node
+	if err := s.ensureSvelteKitAdapter(workDir, deployment.ID); err != nil {
+		return fmt.Errorf("failed to prepare SvelteKit project: %w", err)
+	}
+
+	// Generate Dockerfile if needed
 	if err := s.ensureDockerfile(workDir, project); err != nil {
 		return fmt.Errorf("failed to create Dockerfile: %w", err)
 	}
@@ -135,6 +142,15 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 	s.logBuild(deployment.ID, "Building Docker image...", "info")
 	imageName := fmt.Sprintf("vps-panel/project-%d:latest", project.ID)
 	if err := s.dockerService.BuildImage(ctx, workDir, imageName); err != nil {
+		// Provide helpful error message
+		errorMsg := err.Error()
+		if strings.Contains(errorMsg, "file does not exist") || strings.Contains(errorMsg, "no such file") {
+			detectedFramework := s.detectFramework(workDir)
+			s.logBuild(deployment.ID, fmt.Sprintf("Detected framework: %s", detectedFramework), "info")
+			s.logBuild(deployment.ID, "Build failed - the output directory may not match your framework's build output", "error")
+			s.logBuild(deployment.ID, fmt.Sprintf("Current output directory setting: %s", project.OutputDir), "error")
+			s.logBuild(deployment.ID, "Check your project's build configuration and set the correct output directory in project settings", "error")
+		}
 		return fmt.Errorf("failed to build Docker image: %w", err)
 	}
 
@@ -213,6 +229,79 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 	return nil
 }
 
+// ensureSvelteKitAdapter ensures SvelteKit projects have adapter-node configured
+func (s *DeploymentService) ensureSvelteKitAdapter(repoPath string, deploymentID uint) error {
+	packageJSONPath := filepath.Join(repoPath, "package.json")
+	data, err := os.ReadFile(packageJSONPath)
+	if err != nil {
+		return nil // Not a Node.js project
+	}
+
+	content := string(data)
+
+	// Check if it's a SvelteKit project
+	if !strings.Contains(content, `"@sveltejs/kit"`) {
+		return nil // Not SvelteKit, skip
+	}
+
+	// Check if adapter-node is already present
+	if strings.Contains(content, `"@sveltejs/adapter-node"`) {
+		s.logBuild(deploymentID, "SvelteKit project detected with adapter-node ✓", "info")
+		return nil
+	}
+
+	// Check for other adapters
+	hasCloudflare := strings.Contains(content, `"@sveltejs/adapter-cloudflare"`)
+	hasVercel := strings.Contains(content, `"@sveltejs/adapter-vercel"`)
+	hasAuto := strings.Contains(content, `"@sveltejs/adapter-auto"`)
+
+	if hasCloudflare || hasVercel || hasAuto {
+		s.logBuild(deploymentID, "⚠️  SvelteKit project uses adapter for serverless platforms (Cloudflare/Vercel)", "warning")
+		s.logBuild(deploymentID, "Adding adapter-node for VPS deployment...", "info")
+
+		// Add adapter-node to package.json
+		// Find the devDependencies section and add adapter-node
+		adapterVersion := `"^5.2.12"`
+
+		// Insert after @sveltejs/kit
+		newContent := strings.Replace(content,
+			`"@sveltejs/kit"`,
+			`"@sveltejs/adapter-node": `+adapterVersion+`,
+		"@sveltejs/kit"`,
+			1)
+
+		if err := os.WriteFile(packageJSONPath, []byte(newContent), 0644); err != nil {
+			return fmt.Errorf("failed to update package.json: %w", err)
+		}
+
+		s.logBuild(deploymentID, "✓ Added @sveltejs/adapter-node to package.json", "info")
+	}
+
+	// Update or create svelte.config.js to use adapter-node
+	svelteConfigPath := filepath.Join(repoPath, "svelte.config.js")
+	svelteConfig := `import adapter from '@sveltejs/adapter-node';
+import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
+
+/** @type {import('@sveltejs/kit').Config} */
+const config = {
+	preprocess: vitePreprocess(),
+	kit: {
+		adapter: adapter()
+	}
+};
+
+export default config;
+`
+
+	if err := os.WriteFile(svelteConfigPath, []byte(svelteConfig), 0644); err != nil {
+		return fmt.Errorf("failed to create svelte.config.js: %w", err)
+	}
+
+	s.logBuild(deploymentID, "✓ Updated svelte.config.js to use adapter-node", "info")
+
+	return nil
+}
+
 func (s *DeploymentService) ensureDockerfile(repoPath string, project *models.Project) error {
 	dockerfilePath := filepath.Join(repoPath, "Dockerfile")
 
@@ -221,12 +310,81 @@ func (s *DeploymentService) ensureDockerfile(repoPath string, project *models.Pr
 		return nil // Dockerfile exists
 	}
 
+	// Detect framework from package.json if outputDir not specified
+	if project.OutputDir == "" {
+		detectedDir := s.detectOutputDirectory(repoPath)
+		if detectedDir != "" {
+			project.OutputDir = detectedDir
+			s.db.Save(project)
+		}
+	}
+
 	// Generate Dockerfile based on framework
-	dockerfile := s.generateDockerfile(project)
+	dockerfile := s.generateDockerfile(project, repoPath)
 	return os.WriteFile(dockerfilePath, []byte(dockerfile), 0644)
 }
 
-func (s *DeploymentService) generateDockerfile(project *models.Project) string {
+// detectFramework detects the framework from package.json
+func (s *DeploymentService) detectFramework(repoPath string) string {
+	packageJSONPath := filepath.Join(repoPath, "package.json")
+	data, err := os.ReadFile(packageJSONPath)
+	if err != nil {
+		return "Unknown"
+	}
+
+	content := string(data)
+
+	// Detect framework based on dependencies
+	if strings.Contains(content, `"@sveltejs/kit"`) || strings.Contains(content, `"@sveltejs/adapter-node"`) {
+		return "SvelteKit"
+	}
+	if strings.Contains(content, `"next"`) {
+		return "Next.js"
+	}
+	if strings.Contains(content, `"nuxt"`) {
+		return "Nuxt"
+	}
+	if strings.Contains(content, `"vite"`) && strings.Contains(content, `"react"`) {
+		return "Vite + React"
+	}
+	if strings.Contains(content, `"vite"`) && strings.Contains(content, `"vue"`) {
+		return "Vite + Vue"
+	}
+	if strings.Contains(content, `"vite"`) {
+		return "Vite"
+	}
+
+	return "Node.js (Generic)"
+}
+
+// detectOutputDirectory detects the build output directory from package.json
+func (s *DeploymentService) detectOutputDirectory(repoPath string) string {
+	packageJSONPath := filepath.Join(repoPath, "package.json")
+	data, err := os.ReadFile(packageJSONPath)
+	if err != nil {
+		return "build" // default
+	}
+
+	content := string(data)
+
+	// Detect framework based on dependencies
+	if strings.Contains(content, `"@sveltejs/kit"`) || strings.Contains(content, `"@sveltejs/adapter-node"`) {
+		return "build"
+	}
+	if strings.Contains(content, `"next"`) {
+		return ".next"
+	}
+	if strings.Contains(content, `"nuxt"`) {
+		return ".output"
+	}
+	if strings.Contains(content, `"vite"`) {
+		return "dist"
+	}
+
+	return "build" // default fallback
+}
+
+func (s *DeploymentService) generateDockerfile(project *models.Project, repoPath string) string {
 	nodeVersion := project.NodeVersion
 	if nodeVersion == "" {
 		nodeVersion = "20"
@@ -234,9 +392,15 @@ func (s *DeploymentService) generateDockerfile(project *models.Project) string {
 
 	outputDir := project.OutputDir
 	if outputDir == "" {
-		outputDir = "build"
+		outputDir = s.detectOutputDirectory(repoPath)
 	}
 
+	// For SvelteKit, we need to handle the build output differently
+	if outputDir == "build" {
+		return s.generateSvelteKitDockerfile(nodeVersion, outputDir)
+	}
+
+	// Generic Node.js Dockerfile with flexible output directory
 	return fmt.Sprintf(`FROM node:%s-alpine AS builder
 
 WORKDIR /app
@@ -247,19 +411,62 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
+# Show build output for debugging
+RUN echo "=== Build Output ===" && ls -laR /app
+
 FROM node:%s-alpine
 
 WORKDIR /app
 
-COPY --from=builder /app/%s ./%s
+# Copy build output - try multiple possible locations
+COPY --from=builder /app/%s* ./ 2>/dev/null || COPY --from=builder /app/.next ./.next 2>/dev/null || COPY --from=builder /app/dist ./dist 2>/dev/null || COPY --from=builder /app/build ./build
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
+
+CMD ["node", "index.js"]
+`, nodeVersion, nodeVersion, outputDir)
+}
+
+// generateSvelteKitDockerfile generates a SvelteKit-specific Dockerfile
+func (s *DeploymentService) generateSvelteKitDockerfile(nodeVersion, outputDir string) string {
+	return fmt.Sprintf(`FROM node:%s-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# Show build output for debugging - list the build directory contents
+RUN echo "=== Build Directory Contents ===" && ls -laR /app/%s || echo "Build directory not found at /app/%s"
+
+FROM node:%s-alpine
+
+WORKDIR /app
+
+# Copy the entire build output directory
+COPY --from=builder /app/%s ./
 COPY --from=builder /app/package*.json ./
 
+# Install only production dependencies
 RUN npm ci --production
 
 EXPOSE 3000
 
-CMD ["node", "%s/index.js"]
-`, nodeVersion, nodeVersion, outputDir, outputDir, outputDir)
+ENV PORT=3000
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
+
+CMD ["node", "index.js"]
+`, nodeVersion, outputDir, outputDir, nodeVersion, outputDir)
 }
 
 func (s *DeploymentService) runCommand(workDir, command string) error {
