@@ -27,6 +27,9 @@
 	let clientSecret = $state('');
 	let isDefault = $state(false);
 
+	// OAuth callback URL - computed from current origin
+	let callbackUrl = $state('');
+
 	const providerTypeOptions = [
 		{ value: 'github', label: 'GitHub' },
 		{ value: 'gitea', label: 'Gitea (Self-hosted)' },
@@ -35,6 +38,9 @@
 
 	onMount(() => {
 		loadProviders();
+
+		// Set OAuth callback URL from current origin
+		callbackUrl = `${window.location.origin}/api/v1/auth/oauth/callback`;
 
 		// Check if redirected after OAuth connection
 		const params = new URLSearchParams(window.location.search);
@@ -367,6 +373,33 @@
 						placeholder="OAuth Application Client Secret"
 						required
 					/>
+
+					<!-- OAuth Callback URL -->
+					<div class="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
+						<label class="block text-xs font-medium text-zinc-400 mb-2">
+							OAuth Callback URL
+						</label>
+						<div class="flex items-center space-x-2">
+							<code class="flex-1 text-xs text-green-400 break-all">
+								{callbackUrl}
+							</code>
+							<button
+								type="button"
+								onclick={() => {
+									navigator.clipboard.writeText(callbackUrl);
+									success = 'Callback URL copied to clipboard!';
+									setTimeout(() => { success = ''; }, 2000);
+								}}
+								class="px-2 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded transition-colors"
+								title="Copy to clipboard"
+							>
+								Copy
+							</button>
+						</div>
+						<p class="mt-2 text-xs text-zinc-500">
+							Use this URL when configuring the OAuth application in your {providerType} settings.
+						</p>
+					</div>
 
 					<div class="flex items-center">
 						<input
