@@ -52,7 +52,8 @@ temp/
 
 # Data directories (for local testing)
 data/
-projects/
+/projects/
+backend/data/projects/
 
 # Environment files
 .env
