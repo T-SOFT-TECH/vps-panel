@@ -444,6 +444,15 @@ start_services() {
 create_systemd_service() {
     log_info "Creating systemd service..."
 
+    # Determine OAuth callback URL based on domain/IP
+    if [[ "$PANEL_DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        # IP address - use HTTP
+        OAUTH_CALLBACK_URL="http://$PANEL_DOMAIN/api/v1/auth/oauth/callback"
+    else
+        # Domain name - use HTTPS
+        OAUTH_CALLBACK_URL="https://$PANEL_DOMAIN/api/v1/auth/oauth/callback"
+    fi
+
     cat > /etc/systemd/system/vps-panel.service << EOF
 [Unit]
 Description=VPS Panel - Web Hosting Control Panel
@@ -465,6 +474,7 @@ Environment="GIN_MODE=release"
 Environment="DATABASE_PATH=$DATA_DIR/database/vps-panel.db"
 Environment="PROJECTS_DIR=$DATA_DIR/projects"
 Environment="PORT=$PANEL_PORT"
+Environment="OAUTH_CALLBACK_URL=$OAUTH_CALLBACK_URL"
 
 [Install]
 WantedBy=multi-user.target
