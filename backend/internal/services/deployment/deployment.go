@@ -183,18 +183,19 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Step 6: Update Caddy configuration (optional - only if domains are configured)
-	if len(project.Domains) > 0 && s.hasActiveDomains(project) {
-		s.logBuild(deployment.ID, "Updating reverse proxy configuration...", "info")
-		if err := s.caddyService.GenerateConfig(project); err != nil {
-			return fmt.Errorf("failed to generate Caddy config: %w", err)
-		}
+	// Step 6: Ensure project has a domain (auto-generate subdomain if needed)
+	if err := s.ensureProjectDomain(project, deployment.ID); err != nil {
+		return fmt.Errorf("failed to ensure project domain: %w", err)
+	}
 
-		if err := s.caddyService.Reload(); err != nil {
-			log.Printf("Warning: failed to reload Caddy: %v", err)
-		}
-	} else {
-		s.logBuild(deployment.ID, fmt.Sprintf("No custom domains configured. Access your app at: http://<server-ip>:%d", project.FrontendPort), "info")
+	// Step 7: Update Caddy configuration
+	s.logBuild(deployment.ID, "Updating reverse proxy configuration...", "info")
+	if err := s.caddyService.GenerateConfig(project); err != nil {
+		return fmt.Errorf("failed to generate Caddy config: %w", err)
+	}
+
+	if err := s.caddyService.Reload(); err != nil {
+		log.Printf("Warning: failed to reload Caddy: %v", err)
 	}
 
 	return nil
@@ -298,14 +299,74 @@ func (s *DeploymentService) findAvailablePort(startPort int) (int, error) {
 	return 0, fmt.Errorf("no available port found in range %d-%d", startPort, startPort+100)
 }
 
-// hasActiveDomains checks if the project has any active domains
-func (s *DeploymentService) hasActiveDomains(project *models.Project) bool {
-	for _, domain := range project.Domains {
-		if domain.IsActive {
-			return true
+// generateSubdomain generates a unique subdomain for a project
+func (s *DeploymentService) generateSubdomain(project *models.Project) string {
+	// Sanitize project name for use in subdomain
+	sanitized := strings.ToLower(project.Name)
+	sanitized = strings.ReplaceAll(sanitized, " ", "-")
+	sanitized = strings.ReplaceAll(sanitized, "_", "-")
+	// Remove any non-alphanumeric characters except hyphens
+	var result strings.Builder
+	for _, char := range sanitized {
+		if (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') || char == '-' {
+			result.WriteRune(char)
 		}
 	}
-	return false
+	sanitized = result.String()
+
+	// Add project ID to ensure uniqueness
+	return fmt.Sprintf("%s-%d", sanitized, project.ID)
+}
+
+// ensureProjectDomain ensures the project has at least one active domain
+// If no domain exists, it auto-generates a subdomain like Vercel does
+func (s *DeploymentService) ensureProjectDomain(project *models.Project, deploymentID uint) error {
+	// Check if project already has active domains
+	for _, domain := range project.Domains {
+		if domain.IsActive {
+			s.logBuild(deploymentID, fmt.Sprintf("Using configured domain: %s", domain.Domain), "info")
+			return nil
+		}
+	}
+
+	// No active domains, need to create one
+	// Check if we have a base domain configured
+	baseDomain := s.cfg.PanelDomain
+	if baseDomain == "" {
+		return fmt.Errorf("no panel domain configured. Set PANEL_DOMAIN environment variable or add a custom domain to the project")
+	}
+
+	// Strip protocol and port if present
+	baseDomain = strings.TrimPrefix(baseDomain, "http://")
+	baseDomain = strings.TrimPrefix(baseDomain, "https://")
+	if idx := strings.Index(baseDomain, ":"); idx != -1 {
+		baseDomain = baseDomain[:idx]
+	}
+
+	// Generate subdomain
+	subdomain := s.generateSubdomain(project)
+	fullDomain := fmt.Sprintf("%s.%s", subdomain, baseDomain)
+
+	s.logBuild(deploymentID, fmt.Sprintf("No custom domain configured. Auto-generating subdomain: %s", fullDomain), "info")
+
+	// Create domain entry
+	domain := models.Domain{
+		ProjectID:  project.ID,
+		Domain:     fullDomain,
+		IsActive:   true,
+		SSLEnabled: true,
+	}
+
+	if err := s.db.Create(&domain).Error; err != nil {
+		return fmt.Errorf("failed to create auto-generated domain: %w", err)
+	}
+
+	// Add to project's domains list so Caddy can use it
+	project.Domains = append(project.Domains, domain)
+
+	s.logBuild(deploymentID, fmt.Sprintf("✓ Your app will be available at: https://%s", fullDomain), "info")
+
+	return nil
 }
 
 // ensureAvailablePorts checks and assigns available ports to the project

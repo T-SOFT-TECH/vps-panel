@@ -476,6 +476,7 @@ Environment="PROJECTS_DIR=$DATA_DIR/projects"
 Environment="PORT=$PANEL_PORT"
 Environment="OAUTH_CALLBACK_URL=$OAUTH_CALLBACK_URL"
 Environment="CADDY_CONFIG_PATH=$DATA_DIR/caddy"
+Environment="PANEL_DOMAIN=$PANEL_DOMAIN"
 
 [Install]
 WantedBy=multi-user.target

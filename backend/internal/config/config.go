@@ -51,6 +51,9 @@ type Config struct {
 
 	// OAuth
 	OAuthCallbackURL string
+
+	// Panel Domain (for auto-generating subdomains)
+	PanelDomain string
 }
 
 func Load() *Config {
@@ -99,6 +102,9 @@ func Load() *Config {
 
 		// OAuth
 		OAuthCallbackURL: getEnv("OAUTH_CALLBACK_URL", "http://localhost:8080/api/v1/auth/oauth/callback"),
+
+		// Panel Domain
+		PanelDomain: getEnv("PANEL_DOMAIN", ""),
 	}
 }
 
