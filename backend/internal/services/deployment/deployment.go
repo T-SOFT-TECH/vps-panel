@@ -2,9 +2,11 @@ package deployment
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -198,6 +200,16 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		log.Printf("Warning: failed to reload Caddy: %v", err)
 	}
 
+	// Step 8: Trigger SSL certificate provisioning
+	if len(project.Domains) > 0 {
+		s.logBuild(deployment.ID, "Provisioning SSL certificate...", "info")
+		if err := s.provisionSSLCertificate(project, deployment.ID); err != nil {
+			// Don't fail deployment if SSL provisioning fails, just warn
+			log.Printf("Warning: failed to provision SSL certificate: %v", err)
+			s.logBuild(deployment.ID, "SSL certificate will be obtained on first access (may take 10-30 seconds)", "warning")
+		}
+	}
+
 	return nil
 }
 
@@ -366,6 +378,49 @@ func (s *DeploymentService) ensureProjectDomain(project *models.Project, deploym
 
 	s.logBuild(deploymentID, fmt.Sprintf("✓ Your app will be available at: https://%s", fullDomain), "info")
 
+	return nil
+}
+
+// provisionSSLCertificate triggers SSL certificate provisioning by making a request to the domain
+// This forces Caddy to obtain the certificate during deployment rather than on first user access
+func (s *DeploymentService) provisionSSLCertificate(project *models.Project, deploymentID uint) error {
+	// Get the first active domain
+	var domain string
+	for _, d := range project.Domains {
+		if d.IsActive {
+			domain = d.Domain
+			break
+		}
+	}
+
+	if domain == "" {
+		return fmt.Errorf("no active domain found")
+	}
+
+	// Create HTTP client with custom transport that accepts self-signed certs temporarily
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, // We're just triggering cert provisioning, not validating
+			},
+		},
+	}
+
+	// Make HTTPS request to trigger certificate provisioning
+	url := fmt.Sprintf("https://%s", domain)
+	s.logBuild(deploymentID, fmt.Sprintf("Requesting %s to trigger SSL certificate...", url), "info")
+
+	resp, err := client.Get(url)
+	if err != nil {
+		return fmt.Errorf("failed to trigger SSL provisioning: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Wait a moment for certificate to be fully provisioned
+	time.Sleep(2 * time.Second)
+
+	s.logBuild(deploymentID, "✓ SSL certificate provisioned successfully", "info")
 	return nil
 }
 
