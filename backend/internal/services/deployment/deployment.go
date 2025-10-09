@@ -244,10 +244,10 @@ COPY --from=builder /app/package*.json ./
 
 RUN npm ci --production
 
-EXPOSE %d
+EXPOSE 3000
 
 CMD ["node", "%s/index.js"]
-`, nodeVersion, nodeVersion, outputDir, outputDir, project.FrontendPort, outputDir)
+`, nodeVersion, nodeVersion, outputDir, outputDir, outputDir)
 }
 
 func (s *DeploymentService) runCommand(workDir, command string) error {

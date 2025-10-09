@@ -142,14 +142,15 @@ func (s *DockerService) CreateContainer(ctx context.Context, project *models.Pro
 	containerName := fmt.Sprintf("vps-panel-%s-%d", project.Name, project.ID)
 
 	// Port bindings
+	// Container always uses port 3000 internally, map to assigned host port
 	portBindings := nat.PortMap{}
 	if project.FrontendPort > 0 {
-		portBindings[nat.Port(fmt.Sprintf("%d/tcp", project.FrontendPort))] = []nat.PortBinding{
+		portBindings[nat.Port("3000/tcp")] = []nat.PortBinding{
 			{HostIP: "127.0.0.1", HostPort: fmt.Sprintf("%d", project.FrontendPort)},
 		}
 	}
 	if project.BackendPort > 0 {
-		portBindings[nat.Port(fmt.Sprintf("%d/tcp", project.BackendPort))] = []nat.PortBinding{
+		portBindings[nat.Port("8080/tcp")] = []nat.PortBinding{
 			{HostIP: "127.0.0.1", HostPort: fmt.Sprintf("%d", project.BackendPort)},
 		}
 	}
@@ -205,6 +206,7 @@ func (s *DockerService) GetContainerLogs(ctx context.Context, containerID string
 func (s *DockerService) buildEnvVars(project *models.Project) []string {
 	envVars := []string{
 		"NODE_ENV=production",
+		"PORT=3000", // Container always listens on port 3000 internally
 	}
 
 	// Add project-specific environment variables
