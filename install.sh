@@ -330,16 +330,75 @@ create_directories() {
 
 # Download and build application
 install_application() {
-    log_info "Installing VPS Panel application..."
+    log_info "Downloading VPS Panel application..."
 
     cd $INSTALL_DIR
 
-    # Clone repository (for now, we'll copy from local, but in production this would clone from GitHub)
-    # git clone https://github.com/$GITHUB_REPO.git .
+    # Clone repository from GitHub
+    log_info "Cloning from GitHub: $GITHUB_REPO..."
+    sudo -u $PANEL_USER git clone https://github.com/$GITHUB_REPO.git . 2>&1 | grep -v "Cloning into" || true
 
-    # For now, we'll create a placeholder
-    log_warning "Application installation will be completed after source code is available"
-    log_info "Please manually copy your application files to $INSTALL_DIR"
+    log_success "Application downloaded successfully"
+}
+
+# Build backend application
+build_backend() {
+    log_info "Building backend application..."
+
+    cd $INSTALL_DIR/backend
+
+    # Initialize Go modules
+    sudo -u $PANEL_USER /usr/local/go/bin/go mod download
+
+    # Build the application
+    log_info "Compiling Go backend..."
+    sudo -u $PANEL_USER /usr/local/go/bin/go build -o $INSTALL_DIR/vps-panel ./cmd/server
+
+    # Make executable
+    chmod +x $INSTALL_DIR/vps-panel
+
+    log_success "Backend built successfully"
+}
+
+# Build frontend (optional - can be built on first run)
+build_frontend() {
+    if [[ ! -d "$INSTALL_DIR/frontend" ]]; then
+        log_warning "Frontend directory not found, skipping"
+        return
+    fi
+
+    log_info "Building frontend application..."
+
+    cd $INSTALL_DIR/frontend
+
+    # Install dependencies
+    log_info "Installing npm dependencies..."
+    sudo -u $PANEL_USER npm install --quiet
+
+    # Build frontend
+    log_info "Building SvelteKit frontend..."
+    sudo -u $PANEL_USER npm run build --quiet
+
+    log_success "Frontend built successfully"
+}
+
+# Start services
+start_services() {
+    log_info "Starting VPS Panel service..."
+
+    # Enable and start the service
+    systemctl enable vps-panel
+    systemctl start vps-panel
+
+    # Wait for service to start
+    sleep 3
+
+    # Check if service is running
+    if systemctl is-active --quiet vps-panel; then
+        log_success "VPS Panel service started successfully"
+    else
+        log_warning "Service may have issues. Check logs with: journalctl -u vps-panel -f"
+    fi
 }
 
 # Create systemd service
@@ -483,42 +542,41 @@ print_completion() {
     echo "  • Caddy: $(caddy version | head -n1)"
     echo "  • SQLite: $(sqlite3 --version | awk '{print $1}')"
     echo ""
-    log_info "Next Steps:"
-    echo "  1. Copy your application files to: $INSTALL_DIR"
-    echo "  2. Build the application:"
-    echo "     cd $INSTALL_DIR/backend"
-    echo "     go build -o $INSTALL_DIR/vps-panel ./cmd/server"
-    echo ""
-    echo "  3. Start the service:"
-    echo "     systemctl start vps-panel"
-    echo "     systemctl enable vps-panel"
-    echo ""
-    echo "  4. Check service status:"
-    echo "     systemctl status vps-panel"
-    echo ""
-    echo "  5. View logs:"
-    echo "     tail -f $LOG_DIR/panel.log"
-    echo ""
 
-    # Show access URL based on configuration
+    # Show access URL and service status
     if [[ "$PANEL_DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-        log_info "Access the panel at:"
-        echo "  • http://$PANEL_DOMAIN"
+        log_info "Access your VPS Panel at:"
         echo ""
-        log_warning "You're using an IP address. For HTTPS, configure a domain:"
-        echo "  1. Update DNS: Add A record pointing to $PANEL_DOMAIN"
-        echo "  2. Edit /etc/caddy/Caddyfile with your domain"
-        echo "  3. Reload Caddy: systemctl reload caddy"
+        echo "  ${GREEN}→ http://$PANEL_DOMAIN${NC}"
+        echo ""
+        log_warning "You're using an IP address (HTTP only)"
+        echo ""
+        log_info "To enable HTTPS:"
+        echo "  1. Configure a domain in your DNS provider"
+        echo "  2. Point an A record to: $PANEL_DOMAIN"
+        echo "  3. Update /etc/caddy/Caddyfile with your domain"
+        echo "  4. Reload Caddy: systemctl reload caddy"
     else
-        log_info "Access the panel at:"
-        echo "  • https://$PANEL_DOMAIN (Automatic HTTPS)"
-        echo "  • http://$PANEL_DOMAIN (will redirect to HTTPS)"
+        log_info "Access your VPS Panel at:"
         echo ""
-        log_success "Caddy will automatically obtain SSL certificate from Let's Encrypt!"
+        echo "  ${GREEN}→ https://$PANEL_DOMAIN${NC}"
         echo ""
-        log_info "Note: Make sure your DNS A record is configured:"
-        echo "  Domain: $PANEL_DOMAIN → IP: $(hostname -I | awk '{print $1}')"
+        log_success "Automatic HTTPS enabled via Let's Encrypt!"
+        echo ""
+        log_info "DNS Configuration:"
+        echo "  Make sure your A record points: $PANEL_DOMAIN → $(hostname -I | awk '{print $1}')"
     fi
+
+    echo ""
+    echo "═══════════════════════════════════════════════════════"
+    echo ""
+    log_info "Useful Commands:"
+    echo "  • View logs:        tail -f $LOG_DIR/panel.log"
+    echo "  • Service status:   systemctl status vps-panel"
+    echo "  • Restart service:  systemctl restart vps-panel"
+    echo "  • View all logs:    journalctl -u vps-panel -f"
+    echo ""
+    log_success "Installation complete! Open the URL above to get started."
     echo ""
 }
 
@@ -533,18 +591,29 @@ main() {
     log_info "Starting installation..."
     echo ""
 
+    # Install dependencies
     update_system
     install_docker
     install_go
     install_nodejs
     install_sqlite
     install_caddy
+
+    # Setup application
     create_panel_user
     create_directories
+    install_application
+    build_backend
+    build_frontend
+
+    # Configure services
     create_config
     create_systemd_service
     configure_caddy
     configure_firewall
+
+    # Start the application
+    start_services
 
     print_completion
 }
