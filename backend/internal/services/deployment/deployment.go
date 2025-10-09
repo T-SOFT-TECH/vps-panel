@@ -244,9 +244,11 @@ func (s *DeploymentService) ensureSvelteKitAdapter(repoPath string, deploymentID
 		return nil // Not SvelteKit, skip
 	}
 
+	s.logBuild(deploymentID, "Detected SvelteKit project", "info")
+
 	// Check if adapter-node is already present
 	if strings.Contains(content, `"@sveltejs/adapter-node"`) {
-		s.logBuild(deploymentID, "SvelteKit project detected with adapter-node ✓", "info")
+		s.logBuild(deploymentID, "Project already has adapter-node configured ✓", "info")
 		return nil
 	}
 
@@ -256,11 +258,10 @@ func (s *DeploymentService) ensureSvelteKitAdapter(repoPath string, deploymentID
 	hasAuto := strings.Contains(content, `"@sveltejs/adapter-auto"`)
 
 	if hasCloudflare || hasVercel || hasAuto {
-		s.logBuild(deploymentID, "⚠️  SvelteKit project uses adapter for serverless platforms (Cloudflare/Vercel)", "warning")
-		s.logBuild(deploymentID, "Adding adapter-node for VPS deployment...", "info")
+		s.logBuild(deploymentID, "⚠️  Project configured for serverless platforms (Cloudflare/Vercel)", "warning")
+		s.logBuild(deploymentID, "Automatically configuring for VPS deployment...", "info")
 
 		// Add adapter-node to package.json
-		// Find the devDependencies section and add adapter-node
 		adapterVersion := `"^5.2.12"`
 
 		// Insert after @sveltejs/kit
@@ -275,10 +276,28 @@ func (s *DeploymentService) ensureSvelteKitAdapter(repoPath string, deploymentID
 		}
 
 		s.logBuild(deploymentID, "✓ Added @sveltejs/adapter-node to package.json", "info")
+
+		// Remove package-lock.json since we modified package.json
+		lockFilePath := filepath.Join(repoPath, "package-lock.json")
+		if _, err := os.Stat(lockFilePath); err == nil {
+			os.Remove(lockFilePath)
+			s.logBuild(deploymentID, "Removed package-lock.json (will be regenerated)", "info")
+		}
 	}
 
 	// Update or create svelte.config.js to use adapter-node
 	svelteConfigPath := filepath.Join(repoPath, "svelte.config.js")
+
+	// Check if svelte.config.js exists
+	existingConfig, err := os.ReadFile(svelteConfigPath)
+	if err == nil {
+		// File exists, check if it's already using adapter-node
+		if strings.Contains(string(existingConfig), "@sveltejs/adapter-node") {
+			s.logBuild(deploymentID, "svelte.config.js already configured with adapter-node", "info")
+			return nil
+		}
+	}
+
 	svelteConfig := `import adapter from '@sveltejs/adapter-node';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
@@ -439,13 +458,16 @@ func (s *DeploymentService) generateSvelteKitDockerfile(nodeVersion, outputDir s
 
 WORKDIR /app
 
+# Copy package files
 COPY package*.json ./
-RUN npm ci
+
+# Install dependencies - use npm install if no lock file, otherwise npm ci
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 COPY . .
 RUN npm run build
 
-# Show build output for debugging - list the build directory contents
+# Show build output for debugging
 RUN echo "=== Build Directory Contents ===" && ls -laR /app/%s || echo "Build directory not found at /app/%s"
 
 FROM node:%s-alpine
@@ -457,7 +479,7 @@ COPY --from=builder /app/%s ./
 COPY --from=builder /app/package*.json ./
 
 # Install only production dependencies
-RUN npm ci --production
+RUN npm install --production
 
 EXPOSE 3000
 
