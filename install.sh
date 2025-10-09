@@ -28,6 +28,7 @@ DATA_DIR="/var/lib/vps-panel"
 LOG_DIR="/var/log/vps-panel"
 PANEL_USER="vps-panel"
 PANEL_PORT="3456"
+FRONTEND_PORT="3000"
 PANEL_DOMAIN=""  # Will be set during installation
 GITHUB_REPO="T-SOFT-TECH/vps-panel"
 
@@ -412,20 +413,30 @@ build_frontend() {
 
 # Start services
 start_services() {
-    log_info "Starting VPS Panel service..."
+    log_info "Starting VPS Panel services..."
 
-    # Enable and start the service
+    # Enable and start backend service
     systemctl enable vps-panel
     systemctl start vps-panel
 
-    # Wait for service to start
+    # Enable and start frontend service
+    systemctl enable vps-panel-frontend
+    systemctl start vps-panel-frontend
+
+    # Wait for services to start
     sleep 3
 
-    # Check if service is running
+    # Check if services are running
     if systemctl is-active --quiet vps-panel; then
-        log_success "VPS Panel service started successfully"
+        log_success "Backend service started successfully"
     else
-        log_warning "Service may have issues. Check logs with: journalctl -u vps-panel -f"
+        log_warning "Backend service may have issues. Check logs with: journalctl -u vps-panel -f"
+    fi
+
+    if systemctl is-active --quiet vps-panel-frontend; then
+        log_success "Frontend service started successfully"
+    else
+        log_warning "Frontend service may have issues. Check logs with: journalctl -u vps-panel-frontend -f"
     fi
 }
 
@@ -463,6 +474,37 @@ EOF
     log_success "Systemd service created"
 }
 
+# Create frontend systemd service
+create_frontend_systemd_service() {
+    log_info "Creating frontend systemd service..."
+
+    cat > /etc/systemd/system/vps-panel-frontend.service << EOF
+[Unit]
+Description=VPS Panel Frontend
+After=network.target
+
+[Service]
+Type=simple
+User=$PANEL_USER
+WorkingDirectory=$INSTALL_DIR/frontend/build
+Environment="PORT=$FRONTEND_PORT"
+Environment="HOST=0.0.0.0"
+Environment="BODY_SIZE_LIMIT=Infinity"
+ExecStart=/usr/bin/node index.js
+Restart=always
+RestartSec=10
+
+StandardOutput=append:$LOG_DIR/frontend.log
+StandardError=append:$LOG_DIR/frontend-error.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    systemctl daemon-reload
+    log_success "Frontend systemd service created"
+}
+
 # Configure Caddy
 configure_caddy() {
     log_info "Configuring Caddy reverse proxy..."
@@ -473,12 +515,38 @@ configure_caddy() {
         cat > /etc/caddy/Caddyfile << EOF
 # VPS Panel - Main Interface (HTTP only - using IP)
 http://$PANEL_DOMAIN {
-    reverse_proxy localhost:$PANEL_PORT
+    # API routes go to backend
+    handle /api/* {
+        reverse_proxy localhost:$PANEL_PORT
+    }
+
+    # WebSocket for live logs
+    handle /ws/* {
+        reverse_proxy localhost:$PANEL_PORT
+    }
+
+    # Everything else goes to frontend
+    handle {
+        reverse_proxy localhost:$FRONTEND_PORT
+    }
 }
 
 # Also listen on port 80 for any host
 :80 {
-    reverse_proxy localhost:$PANEL_PORT
+    # API routes go to backend
+    handle /api/* {
+        reverse_proxy localhost:$PANEL_PORT
+    }
+
+    # WebSocket for live logs
+    handle /ws/* {
+        reverse_proxy localhost:$PANEL_PORT
+    }
+
+    # Everything else goes to frontend
+    handle {
+        reverse_proxy localhost:$FRONTEND_PORT
+    }
 }
 
 # Deployed applications will be configured here
@@ -490,7 +558,20 @@ EOF
         cat > /etc/caddy/Caddyfile << EOF
 # VPS Panel - Main Interface (Auto HTTPS)
 $PANEL_DOMAIN {
-    reverse_proxy localhost:$PANEL_PORT
+    # API routes go to backend
+    handle /api/* {
+        reverse_proxy localhost:$PANEL_PORT
+    }
+
+    # WebSocket for live logs
+    handle /ws/* {
+        reverse_proxy localhost:$PANEL_PORT
+    }
+
+    # Everything else goes to frontend
+    handle {
+        reverse_proxy localhost:$FRONTEND_PORT
+    }
 }
 
 # Deployed applications will be configured here
@@ -637,6 +718,7 @@ main() {
     # Configure services
     create_config
     create_systemd_service
+    create_frontend_systemd_service
     configure_caddy
     configure_firewall
 
