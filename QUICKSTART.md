@@ -22,7 +22,7 @@ caddy version
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/vps-panel.git
+git clone https://github.com/T-SOFT-TECH/vps-panel.git
 cd vps-panel
 
 # Install all dependencies (frontend + backend)
@@ -115,7 +115,7 @@ Click the "Deploy" button and watch your app build in real-time!
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/yourusername/vps-panel.git
+git clone https://github.com/T-SOFT-TECH/vps-panel.git
 cd vps-panel
 
 # 2. Configure production environment
@@ -255,8 +255,8 @@ make lint-frontend    # Lint frontend code
 ## Getting Help
 
 - 📚 [Full Documentation](./README.md)
-- 🐛 [Report Issues](https://github.com/yourusername/vps-panel/issues)
-- 💬 [Discussions](https://github.com/yourusername/vps-panel/discussions)
+- 🐛 [Report Issues](https://github.com/T-SOFT-TECH/vps-panel/issues)
+- 💬 [Discussions](https://github.com/T-SOFT-TECH/vps-panel/discussions)
 
 ---
 

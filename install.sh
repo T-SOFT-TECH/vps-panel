@@ -3,8 +3,8 @@
 #############################################################
 # VPS Panel - One-Command Installation Script
 #
-# Usage: curl -fsSL https://raw.githubusercontent.com/yourusername/vps-panel/main/install.sh | bash
-# Or: wget -qO- https://raw.githubusercontent.com/yourusername/vps-panel/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/T-SOFT-TECH/vps-panel/main/install.sh | bash
+# Or: wget -qO- https://raw.githubusercontent.com/T-SOFT-TECH/vps-panel/main/install.sh | bash
 #
 # System Requirements:
 # - Ubuntu 20.04/22.04/24.04 or Debian 11/12
@@ -29,7 +29,7 @@ LOG_DIR="/var/log/vps-panel"
 PANEL_USER="vps-panel"
 PANEL_PORT="3456"
 PANEL_DOMAIN=""  # Will be set during installation
-GITHUB_REPO="yourusername/vps-panel" # Update this with your actual repo
+GITHUB_REPO="T-SOFT-TECH/vps-panel"
 
 # Logging functions
 log_info() {

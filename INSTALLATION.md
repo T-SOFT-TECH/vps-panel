@@ -22,13 +22,13 @@ Complete guide for installing VPS Panel on a fresh Ubuntu/Debian server.
 For a fresh Ubuntu/Debian server, run:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/vps-panel/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/T-SOFT-TECH/vps-panel/main/install.sh | sudo bash
 ```
 
 Or using wget:
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/yourusername/vps-panel/main/install.sh | sudo bash
+wget -qO- https://raw.githubusercontent.com/T-SOFT-TECH/vps-panel/main/install.sh | sudo bash
 ```
 
 This will install all dependencies and configure the system.
@@ -149,7 +149,7 @@ After installation, deploy the application:
 ```bash
 # Clone repository
 cd /opt/vps-panel
-sudo -u vps-panel git clone https://github.com/yourusername/vps-panel.git .
+sudo -u vps-panel git clone https://github.com/T-SOFT-TECH/vps-panel.git .
 
 # Run deployment script
 sudo ./deploy.sh
@@ -448,7 +448,7 @@ sudo rm -rf /usr/local/go
 ## 📞 Support
 
 For issues and questions:
-- GitHub Issues: https://github.com/yourusername/vps-panel/issues
+- GitHub Issues: https://github.com/T-SOFT-TECH/vps-panel/issues
 - Documentation: https://docs.yourpanel.com
 - Community: https://discord.gg/yourpanel
 

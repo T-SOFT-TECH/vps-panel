@@ -5,13 +5,13 @@
 ### For Fresh Ubuntu/Debian VPS:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/vps-panel/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/T-SOFT-TECH/vps-panel/main/install.sh | sudo bash
 ```
 
 Or download and run locally:
 
 ```bash
-wget https://raw.githubusercontent.com/yourusername/vps-panel/main/install.sh
+wget https://raw.githubusercontent.com/T-SOFT-TECH/vps-panel/main/install.sh
 chmod +x install.sh
 sudo ./install.sh
 ```
@@ -99,7 +99,7 @@ After installation completes:
 ```bash
 # Option 1: Clone from GitHub
 cd /opt/vps-panel
-sudo git clone https://github.com/yourusername/vps-panel.git .
+sudo git clone https://github.com/T-SOFT-TECH/vps-panel.git .
 sudo ./deploy.sh
 
 # Option 2: Upload your code

@@ -53,7 +53,7 @@ A Vercel-like deployment platform for self-hosting full-stack applications on yo
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/vps-panel.git
+git clone https://github.com/T-SOFT-TECH/vps-panel.git
 cd vps-panel
 ```
 
@@ -278,7 +278,7 @@ Built with:
 ## 📞 Support
 
 - Documentation: [docs/](./docs/)
-- Issues: [GitHub Issues](https://github.com/yourusername/vps-panel/issues)
+- Issues: [GitHub Issues](https://github.com/T-SOFT-TECH/vps-panel/issues)
 
 ---
 
