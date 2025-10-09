@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -135,7 +136,13 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to build Docker image: %w", err)
 	}
 
-	// Step 4: Deploy container
+	// Step 4: Check and assign available ports
+	s.logBuild(deployment.ID, "Checking port availability...", "info")
+	if err := s.ensureAvailablePorts(project, deployment.ID); err != nil {
+		return fmt.Errorf("failed to ensure available ports: %w", err)
+	}
+
+	// Step 5: Deploy container
 	deployment.Status = models.DeploymentDeploying
 	s.db.Save(&deployment)
 	s.logBuild(deployment.ID, "Deploying container...", "info")
@@ -176,7 +183,7 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Step 5: Update Caddy configuration
+	// Step 6: Update Caddy configuration
 	s.logBuild(deployment.ID, "Updating reverse proxy configuration...", "info")
 	if err := s.caddyService.GenerateConfig(project); err != nil {
 		return fmt.Errorf("failed to generate Caddy config: %w", err)
@@ -263,4 +270,74 @@ func (s *DeploymentService) logBuild(deploymentID uint, message, logType string)
 		LogType:      logType,
 	}
 	s.db.Create(&buildLog)
+}
+
+// isPortAvailable checks if a port is available for binding
+func (s *DeploymentService) isPortAvailable(port int) bool {
+	// Try to listen on the port
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		return false // Port is not available
+	}
+	listener.Close()
+	return true
+}
+
+// findAvailablePort finds an available port starting from the given port
+func (s *DeploymentService) findAvailablePort(startPort int) (int, error) {
+	// Try up to 100 ports
+	for port := startPort; port < startPort+100; port++ {
+		if s.isPortAvailable(port) {
+			return port, nil
+		}
+	}
+	return 0, fmt.Errorf("no available port found in range %d-%d", startPort, startPort+100)
+}
+
+// ensureAvailablePorts checks and assigns available ports to the project
+func (s *DeploymentService) ensureAvailablePorts(project *models.Project, deploymentID uint) error {
+	portUpdated := false
+
+	// Check and assign frontend port
+	if project.FrontendPort > 0 {
+		if !s.isPortAvailable(project.FrontendPort) {
+			s.logBuild(deploymentID, fmt.Sprintf("Frontend port %d is in use, finding available port...", project.FrontendPort), "info")
+
+			// Start searching from 3001 to avoid conflicts with VPS Panel (3000)
+			newPort, err := s.findAvailablePort(3001)
+			if err != nil {
+				return fmt.Errorf("failed to find available frontend port: %w", err)
+			}
+
+			s.logBuild(deploymentID, fmt.Sprintf("Automatically assigned frontend port: %d", newPort), "info")
+			project.FrontendPort = newPort
+			portUpdated = true
+		}
+	}
+
+	// Check and assign backend port
+	if project.BackendPort > 0 {
+		if !s.isPortAvailable(project.BackendPort) {
+			s.logBuild(deploymentID, fmt.Sprintf("Backend port %d is in use, finding available port...", project.BackendPort), "info")
+
+			// Start searching from 8080 for backend ports
+			newPort, err := s.findAvailablePort(8080)
+			if err != nil {
+				return fmt.Errorf("failed to find available backend port: %w", err)
+			}
+
+			s.logBuild(deploymentID, fmt.Sprintf("Automatically assigned backend port: %d", newPort), "info")
+			project.BackendPort = newPort
+			portUpdated = true
+		}
+	}
+
+	// Save project if ports were updated
+	if portUpdated {
+		if err := s.db.Save(project).Error; err != nil {
+			return fmt.Errorf("failed to save updated ports: %w", err)
+		}
+	}
+
+	return nil
 }
