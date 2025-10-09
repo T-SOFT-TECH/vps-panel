@@ -2,7 +2,9 @@
 import { browser } from '$app/environment';
 import { goto } from '$app/navigation';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+// Use relative URL - works with Caddy reverse proxy in production
+// and Vite proxy in development
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 interface FetchOptions extends RequestInit {
 	requiresAuth?: boolean;
