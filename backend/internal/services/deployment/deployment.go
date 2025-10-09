@@ -127,25 +127,14 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to create Dockerfile: %w", err)
 	}
 
-	// Step 3: Install dependencies and build
-	s.logBuild(deployment.ID, "Installing dependencies...", "info")
-	if err := s.runCommand(workDir, project.InstallCommand); err != nil {
-		return fmt.Errorf("failed to install dependencies: %w", err)
-	}
-
-	s.logBuild(deployment.ID, "Building project...", "info")
-	if err := s.runCommand(workDir, project.BuildCommand); err != nil {
-		return fmt.Errorf("failed to build project: %w", err)
-	}
-
-	// Step 4: Build Docker image
+	// Step 3: Build Docker image (includes install and build steps)
 	s.logBuild(deployment.ID, "Building Docker image...", "info")
 	imageName := fmt.Sprintf("vps-panel/project-%d:latest", project.ID)
 	if err := s.dockerService.BuildImage(ctx, workDir, imageName); err != nil {
 		return fmt.Errorf("failed to build Docker image: %w", err)
 	}
 
-	// Step 5: Deploy container
+	// Step 4: Deploy container
 	deployment.Status = models.DeploymentDeploying
 	s.db.Save(&deployment)
 	s.logBuild(deployment.ID, "Deploying container...", "info")
@@ -159,7 +148,7 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Step 6: Update Caddy configuration
+	// Step 5: Update Caddy configuration
 	s.logBuild(deployment.ID, "Updating reverse proxy configuration...", "info")
 	if err := s.caddyService.GenerateConfig(project); err != nil {
 		return fmt.Errorf("failed to generate Caddy config: %w", err)
