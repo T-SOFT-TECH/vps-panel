@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+@theme {
+	--color-primary-50: #f0fdf4;
+	--color-primary-100: #dcfce7;
+	--color-primary-200: #bbf7d0;
+	--color-primary-300: #86efac;
+	--color-primary-400: #4ade80;
+	--color-primary-500: #22c55e;
+	--color-primary-600: #16a34a;
+	--color-primary-700: #15803d;
+	--color-primary-800: #166534;
+	--color-primary-900: #14532d;
+	--color-primary-950: #052e16;
+}
+
+:root {
+	color-scheme: dark;
+}
+
+body {
+	@apply bg-zinc-950 text-zinc-100;
+}
+
+/* View Transitions */
+@view-transition {
+	navigation: auto;
+}
+
+/* Root transition - smooth fade with slight scale */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.25s;
+	animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+::view-transition-old(root) {
+	animation-name: fade-scale-out;
+}
+
+::view-transition-new(root) {
+	animation-name: fade-scale-in;
+}
+
+@keyframes fade-scale-out {
+	to {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+}
+
+@keyframes fade-scale-in {
+	from {
+		opacity: 0;
+		transform: scale(0.98);
+	}
+}
+
+/* Optional: Add specific transitions for different types of content */
+@media (prefers-reduced-motion: reduce) {
+	::view-transition-old(root),
+	::view-transition-new(root) {
+		animation-duration: 0.01ms !important;
+	}
+}

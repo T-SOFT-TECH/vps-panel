@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # VPS Panel Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vps-panel-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - ENV=production
+      - DB_DRIVER=sqlite
+      - DB_PATH=/data/vps-panel.db
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - REDIS_ADDR=redis:6379
+      - PROJECTS_DIR=/data/projects
+      - CADDY_CONFIG_PATH=/etc/caddy/sites
+      - CADDY_RELOAD_CMD=systemctl reload caddy
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-key}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-webhook-secret}
+    volumes:
+      - ./backend/data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/caddy/sites:/etc/caddy/sites
+    depends_on:
+      - redis
+    networks:
+      - vps-panel
+
+  # Frontend (SvelteKit)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: vps-panel-frontend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PUBLIC_API_URL=http://localhost:8080/api/v1
+    networks:
+      - vps-panel
+
+  # Redis for background jobs
+  redis:
+    image: redis:7-alpine
+    container_name: vps-panel-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - vps-panel
+
+volumes:
+  redis-data:
+
+networks:
+  vps-panel:
+    driver: bridge

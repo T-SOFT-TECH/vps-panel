@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/TSOFT/Documents/Websites/fleetpost-sveltekit/**)",
+      "Bash(mkdir:*)",
+      "Bash(tree:*)",
+      "Bash(go mod init:*)",
+      "Bash(chmod:*)",
+      "Bash(go mod:*)",
+      "Bash(go build:*)",
+      "Bash(tail:*)",
+      "Bash(npm run dev:*)",
+      "Bash(where go)",
+      "Bash(docker:*)",
+      "Bash(sqlite3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
