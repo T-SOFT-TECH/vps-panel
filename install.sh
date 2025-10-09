@@ -332,32 +332,60 @@ create_directories() {
 install_application() {
     log_info "Downloading VPS Panel application..."
 
+    # Check if directory is empty
+    if [ "$(ls -A $INSTALL_DIR)" ]; then
+        log_warning "Directory not empty, cleaning up..."
+        rm -rf $INSTALL_DIR/*
+        rm -rf $INSTALL_DIR/.[!.]*
+    fi
+
     cd $INSTALL_DIR
 
     # Clone repository from GitHub
     log_info "Cloning from GitHub: $GITHUB_REPO..."
-    sudo -u $PANEL_USER git clone https://github.com/$GITHUB_REPO.git . 2>&1 | grep -v "Cloning into" || true
+    if sudo -u $PANEL_USER git clone https://github.com/$GITHUB_REPO.git . 2>&1 | tee /tmp/git-clone.log; then
+        log_success "Application downloaded successfully"
+    else
+        log_error "Failed to clone repository. Check /tmp/git-clone.log for details"
+        cat /tmp/git-clone.log
+        error_exit "Git clone failed"
+    fi
 
-    log_success "Application downloaded successfully"
+    # Verify critical directories exist
+    if [[ ! -d "$INSTALL_DIR/backend" ]]; then
+        error_exit "Backend directory not found after clone. Something went wrong."
+    fi
 }
 
 # Build backend application
 build_backend() {
     log_info "Building backend application..."
 
+    # Verify backend directory exists
+    if [[ ! -d "$INSTALL_DIR/backend" ]]; then
+        error_exit "Backend directory not found at $INSTALL_DIR/backend"
+    fi
+
     cd $INSTALL_DIR/backend
 
+    # Check if cmd/server directory exists
+    if [[ ! -d "cmd/server" ]]; then
+        error_exit "Backend structure incorrect: cmd/server directory not found"
+    fi
+
     # Initialize Go modules
+    log_info "Downloading Go dependencies..."
     sudo -u $PANEL_USER /usr/local/go/bin/go mod download
 
     # Build the application
     log_info "Compiling Go backend..."
-    sudo -u $PANEL_USER /usr/local/go/bin/go build -o $INSTALL_DIR/vps-panel ./cmd/server
-
-    # Make executable
-    chmod +x $INSTALL_DIR/vps-panel
-
-    log_success "Backend built successfully"
+    if sudo -u $PANEL_USER /usr/local/go/bin/go build -o $INSTALL_DIR/vps-panel ./cmd/server; then
+        # Make executable
+        chmod +x $INSTALL_DIR/vps-panel
+        log_success "Backend built successfully"
+    else
+        error_exit "Failed to build backend application"
+    fi
 }
 
 # Build frontend (optional - can be built on first run)
