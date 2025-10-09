@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -141,10 +142,37 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 
 	containerID, err := s.dockerService.CreateContainer(ctx, project, imageName)
 	if err != nil {
+		// Check for port conflict
+		if strings.Contains(err.Error(), "address already in use") {
+			portMsg := ""
+			if project.FrontendPort > 0 && project.BackendPort > 0 {
+				portMsg = fmt.Sprintf("frontend port %d or backend port %d", project.FrontendPort, project.BackendPort)
+			} else if project.FrontendPort > 0 {
+				portMsg = fmt.Sprintf("port %d", project.FrontendPort)
+			} else if project.BackendPort > 0 {
+				portMsg = fmt.Sprintf("port %d", project.BackendPort)
+			}
+			return fmt.Errorf("port conflict: %s is already in use. Please use a different port for your project", portMsg)
+		}
 		return fmt.Errorf("failed to create container: %w", err)
 	}
 
 	if err := s.dockerService.StartContainer(ctx, containerID); err != nil {
+		// Check for port conflict on start
+		if strings.Contains(err.Error(), "address already in use") {
+			// Clean up the created container
+			s.dockerService.RemoveContainer(ctx, fmt.Sprintf("vps-panel-%s-%d", project.Name, project.ID))
+
+			portMsg := ""
+			if project.FrontendPort > 0 && project.BackendPort > 0 {
+				portMsg = fmt.Sprintf("frontend port %d or backend port %d", project.FrontendPort, project.BackendPort)
+			} else if project.FrontendPort > 0 {
+				portMsg = fmt.Sprintf("port %d", project.FrontendPort)
+			} else if project.BackendPort > 0 {
+				portMsg = fmt.Sprintf("port %d", project.BackendPort)
+			}
+			return fmt.Errorf("port conflict: %s is already in use. Please use a different port for your project", portMsg)
+		}
 		return fmt.Errorf("failed to start container: %w", err)
 	}
 
