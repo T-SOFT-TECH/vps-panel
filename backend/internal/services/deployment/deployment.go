@@ -183,14 +183,18 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Step 6: Update Caddy configuration
-	s.logBuild(deployment.ID, "Updating reverse proxy configuration...", "info")
-	if err := s.caddyService.GenerateConfig(project); err != nil {
-		return fmt.Errorf("failed to generate Caddy config: %w", err)
-	}
+	// Step 6: Update Caddy configuration (optional - only if domains are configured)
+	if len(project.Domains) > 0 && s.hasActiveDomains(project) {
+		s.logBuild(deployment.ID, "Updating reverse proxy configuration...", "info")
+		if err := s.caddyService.GenerateConfig(project); err != nil {
+			return fmt.Errorf("failed to generate Caddy config: %w", err)
+		}
 
-	if err := s.caddyService.Reload(); err != nil {
-		log.Printf("Warning: failed to reload Caddy: %v", err)
+		if err := s.caddyService.Reload(); err != nil {
+			log.Printf("Warning: failed to reload Caddy: %v", err)
+		}
+	} else {
+		s.logBuild(deployment.ID, fmt.Sprintf("No custom domains configured. Access your app at: http://<server-ip>:%d", project.FrontendPort), "info")
 	}
 
 	return nil
@@ -292,6 +296,16 @@ func (s *DeploymentService) findAvailablePort(startPort int) (int, error) {
 		}
 	}
 	return 0, fmt.Errorf("no available port found in range %d-%d", startPort, startPort+100)
+}
+
+// hasActiveDomains checks if the project has any active domains
+func (s *DeploymentService) hasActiveDomains(project *models.Project) bool {
+	for _, domain := range project.Domains {
+		if domain.IsActive {
+			return true
+		}
+	}
+	return false
 }
 
 // ensureAvailablePorts checks and assigns available ports to the project
