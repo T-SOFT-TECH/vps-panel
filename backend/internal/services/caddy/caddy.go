@@ -92,6 +92,12 @@ func (s *CaddyService) GenerateConfig(project *models.Project) error {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
+	// Ensure Caddy log directory exists with proper permissions
+	logDir := "/var/log/caddy"
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
+	}
+
 	// Build config data
 	config := CaddyConfig{
 		ProjectName:  sanitizeProjectName(project.Name),
