@@ -27,8 +27,12 @@
 	let clientSecret = $state('');
 	let isDefault = $state(false);
 
-	// OAuth callback URL - computed from current origin
-	let callbackUrl = $state('');
+	// OAuth callback URL - computed from current origin and provider type
+	let callbackUrl = $derived(
+		typeof window !== 'undefined'
+			? `${window.location.origin}/api/v1/auth/oauth/callback/${providerType}`
+			: ''
+	);
 
 	const providerTypeOptions = [
 		{ value: 'github', label: 'GitHub' },
@@ -38,9 +42,6 @@
 
 	onMount(() => {
 		loadProviders();
-
-		// Set OAuth callback URL from current origin
-		callbackUrl = `${window.location.origin}/api/v1/auth/oauth/callback`;
 
 		// Check if redirected after OAuth connection
 		const params = new URLSearchParams(window.location.search);
