@@ -11,7 +11,9 @@
 	import Card from '$lib/components/Card.svelte';
 	import Alert from '$lib/components/Alert.svelte';
 	import Badge from '$lib/components/Badge.svelte';
-	import type { FrameworkType, BaaSType, GitHubRepository, GitProvider } from '$lib/types';
+	import type { FrameworkType, BaaSType, GitHubRepository, GiteaRepository, GitProvider } from '$lib/types';
+
+	type Repository = GitHubRepository | GiteaRepository;
 
 	let loading = $state(false);
 	let detecting = $state(false);
@@ -21,9 +23,9 @@
 
 	// Git Provider and repository selection
 	let providers = $state<GitProvider[]>([]);
-	let repositories = $state<GitHubRepository[]>([]);
+	let repositories = $state<Repository[]>([]);
 	let loadingRepos = $state(false);
-	let selectedRepo = $state<GitHubRepository | null>(null);
+	let selectedRepo = $state<Repository | null>(null);
 	let repoSearchQuery = $state('');
 	let showRepoSelector = $state(true);
 	let selectedProvider = $state<GitProvider | null>(null);
@@ -45,6 +47,7 @@
 	let frontendPort = $state(3000);
 	let backendPort = $state(8090);
 	let autoDeploy = $state(true);
+	let customDomain = $state('');
 
 	// Branch listing
 	let branches = $state<string[]>([]);
@@ -97,7 +100,7 @@
 		}
 	}
 
-	function selectRepo(repo: GitHubRepository) {
+	function selectRepo(repo: Repository) {
 		selectedRepo = repo;
 		gitUrl = repo.clone_url;
 		gitBranch = repo.default_branch;
@@ -373,7 +376,8 @@
 				node_version: nodeVersion,
 				frontend_port: frontendPort,
 				backend_port: backendPort,
-				auto_deploy: autoDeploy
+				auto_deploy: autoDeploy,
+				custom_domain: customDomain || undefined
 			});
 
 			success = true;
@@ -788,6 +792,21 @@
 						/>
 					{/if}
 				</div>
+			</div>
+
+			<!-- Domain Configuration -->
+			<div class="space-y-4 pt-6 border-t border-zinc-800">
+				<h3 class="text-lg font-medium text-zinc-100">Domain (Optional)</h3>
+
+				<Input
+					label="Custom Domain"
+					bind:value={customDomain}
+					placeholder="myapp.example.com"
+					disabled={loading}
+				/>
+				<p class="text-xs text-zinc-400 -mt-2">
+					Leave blank to auto-generate a subdomain (e.g., myapp-1.panel.yourdomain.com)
+				</p>
 			</div>
 
 			<!-- Deployment Settings -->

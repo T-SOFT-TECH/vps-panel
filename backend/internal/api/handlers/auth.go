@@ -382,8 +382,15 @@ func (h *AuthHandler) GitHubOAuthCallback(c *fiber.Ctx) error {
 	// Clear state cookie
 	c.ClearCookie("oauth_state")
 
-	// Get first CORS origin for redirect
-	frontendURL := strings.Split(h.cfg.CorsOrigins, ",")[0]
+	// Use panel domain for redirect (defaults to CORS origins if not set)
+	frontendURL := h.cfg.PanelDomain
+	if frontendURL == "" {
+		frontendURL = strings.Split(h.cfg.CorsOrigins, ",")[0]
+	}
+	// Ensure it starts with https://
+	if !strings.HasPrefix(frontendURL, "http") {
+		frontendURL = "https://" + frontendURL
+	}
 
 	// Redirect to frontend with success
 	return c.Redirect(frontendURL + "/settings/git-providers?connected=true")
@@ -548,8 +555,15 @@ func (h *AuthHandler) GiteaOAuthCallback(c *fiber.Ctx) error {
 	// Clear state cookie
 	c.ClearCookie("oauth_state_gitea")
 
-	// Get first CORS origin for redirect
-	frontendURL := strings.Split(h.cfg.CorsOrigins, ",")[0]
+	// Use panel domain for redirect (defaults to CORS origins if not set)
+	frontendURL := h.cfg.PanelDomain
+	if frontendURL == "" {
+		frontendURL = strings.Split(h.cfg.CorsOrigins, ",")[0]
+	}
+	// Ensure it starts with https://
+	if !strings.HasPrefix(frontendURL, "http") {
+		frontendURL = "https://" + frontendURL
+	}
 
 	// Redirect to frontend with success
 	return c.Redirect(frontendURL + "/settings/git-providers?connected=true")

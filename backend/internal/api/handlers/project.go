@@ -74,6 +74,7 @@ type CreateProjectRequest struct {
 	FrontendPort   int                   `json:"frontend_port"`
 	BackendPort    int                   `json:"backend_port"`
 	AutoDeploy     bool                  `json:"auto_deploy"`
+	CustomDomain   string                `json:"custom_domain"`
 }
 
 func (h *ProjectHandler) GetAll(c *fiber.Ctx) error {
@@ -179,6 +180,21 @@ func (h *ProjectHandler) Create(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to create project",
 		})
+	}
+
+	// Create custom domain if provided
+	if req.CustomDomain != "" {
+		domain := models.Domain{
+			ProjectID:  project.ID,
+			Domain:     req.CustomDomain,
+			IsActive:   true,
+			SSLEnabled: true,
+		}
+		if err := h.db.Create(&domain).Error; err != nil {
+			// Don't fail project creation if domain creation fails, just log it
+			// The user can add the domain later
+			println("Warning: failed to create custom domain:", err.Error())
+		}
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(project)
