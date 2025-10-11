@@ -98,14 +98,14 @@
 
 {#if loading}
 	<div class="text-center py-12">
-		<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-		<p class="mt-4 text-zinc-400">Loading deployment...</p>
+		<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-800 mx-auto"></div>
+		<p class="mt-4" style="color: rgb(var(--text-secondary));">Loading deployment...</p>
 	</div>
 {:else if !deployment}
 	<Card>
 		<div class="text-center py-12">
-			<h3 class="text-lg font-medium text-zinc-100">Deployment not found</h3>
-			<p class="mt-1 text-sm text-zinc-400">The deployment you're looking for doesn't exist.</p>
+			<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Deployment not found</h3>
+			<p class="mt-1 text-sm" style="color: rgb(var(--text-secondary));">The deployment you're looking for doesn't exist.</p>
 			<div class="mt-6">
 				<Button onclick={() => window.history.back()}>
 					Go Back
@@ -117,7 +117,7 @@
 	<div class="space-y-6">
 		<!-- Header -->
 		<div>
-			<a href="/projects/{projectId}" class="text-sm text-green-500 hover:text-green-400 flex items-center mb-4">
+			<a href="/projects/{projectId}" class="flex items-center mb-4 text-sm" style="color: rgb(var(--text-brand));">
 				<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 				</svg>
@@ -127,13 +127,13 @@
 			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 				<div>
 					<div class="flex items-center gap-3">
-						<h1 class="text-3xl font-bold text-zinc-100">Deployment #{deployment.id}</h1>
+						<h1 class="text-3xl font-bold" style="color: rgb(var(--text-primary));">Deployment #{deployment.id}</h1>
 						<Badge variant={getStatusVariant(deployment.status)}>
 							{deployment.status}
 						</Badge>
 					</div>
 					{#if deployment.commit_message}
-						<p class="mt-1 text-zinc-400">{deployment.commit_message}</p>
+						<p class="mt-1" style="color: rgb(var(--text-secondary));">{deployment.commit_message}</p>
 					{/if}
 				</div>
 
@@ -148,60 +148,60 @@
 		<!-- Deployment Info -->
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 			<Card>
-				<h3 class="text-sm font-semibold text-zinc-100 mb-3">Commit Information</h3>
+				<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Commit Information</h3>
 				<dl class="space-y-3 text-sm">
 					{#if deployment.commit_hash}
 						<div>
-							<dt class="text-zinc-400">Commit Hash</dt>
-							<dd class="font-mono text-zinc-100">{deployment.commit_hash.substring(0, 7)}</dd>
+							<dt style="color: rgb(var(--text-secondary));">Commit Hash</dt>
+							<dd class="font-mono" style="color: rgb(var(--text-primary));">{deployment.commit_hash.substring(0, 7)}</dd>
 						</div>
 					{/if}
 					{#if deployment.commit_author}
 						<div>
-							<dt class="text-zinc-400">Author</dt>
-							<dd class="text-zinc-100">{deployment.commit_author}</dd>
+							<dt style="color: rgb(var(--text-secondary));">Author</dt>
+							<dd style="color: rgb(var(--text-primary));">{deployment.commit_author}</dd>
 						</div>
 					{/if}
 					<div>
-						<dt class="text-zinc-400">Branch</dt>
-						<dd class="text-zinc-100">{deployment.branch}</dd>
+						<dt style="color: rgb(var(--text-secondary));">Branch</dt>
+						<dd style="color: rgb(var(--text-primary));">{deployment.branch}</dd>
 					</div>
 				</dl>
 			</Card>
 
 			<Card>
-				<h3 class="text-sm font-semibold text-zinc-100 mb-3">Deployment Details</h3>
+				<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Deployment Details</h3>
 				<dl class="space-y-3 text-sm">
 					<div>
-						<dt class="text-zinc-400">Triggered By</dt>
-						<dd class="text-zinc-100 capitalize">{deployment.triggered_by}</dd>
+						<dt style="color: rgb(var(--text-secondary));">Triggered By</dt>
+						<dd class="capitalize" style="color: rgb(var(--text-primary));">{deployment.triggered_by}</dd>
 					</div>
 					{#if deployment.started_at}
 						<div>
-							<dt class="text-zinc-400">Started</dt>
-							<dd class="text-zinc-100">{formatDate(deployment.started_at)}</dd>
+							<dt style="color: rgb(var(--text-secondary));">Started</dt>
+							<dd style="color: rgb(var(--text-primary));">{formatDate(deployment.started_at)}</dd>
 						</div>
 					{/if}
 					{#if deployment.completed_at}
 						<div>
-							<dt class="text-zinc-400">Completed</dt>
-							<dd class="text-zinc-100">{formatDate(deployment.completed_at)}</dd>
+							<dt style="color: rgb(var(--text-secondary));">Completed</dt>
+							<dd style="color: rgb(var(--text-primary));">{formatDate(deployment.completed_at)}</dd>
 						</div>
 					{/if}
 				</dl>
 			</Card>
 
 			<Card>
-				<h3 class="text-sm font-semibold text-zinc-100 mb-3">Performance</h3>
+				<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Performance</h3>
 				<dl class="space-y-3 text-sm">
 					{#if deployment.duration > 0}
 						<div>
-							<dt class="text-zinc-400">Duration</dt>
-							<dd class="text-zinc-100">{formatDuration(deployment.duration)}</dd>
+							<dt style="color: rgb(var(--text-secondary));">Duration</dt>
+							<dd style="color: rgb(var(--text-primary));">{formatDuration(deployment.duration)}</dd>
 						</div>
 					{/if}
 					<div>
-						<dt class="text-zinc-400">Status</dt>
+						<dt style="color: rgb(var(--text-secondary));">Status</dt>
 						<dd>
 							<Badge variant={getStatusVariant(deployment.status)}>
 								{deployment.status}
@@ -215,26 +215,26 @@
 		<!-- Build Logs -->
 		<Card>
 			<div class="flex items-center justify-between mb-4">
-				<h2 class="text-lg font-semibold text-zinc-100">Build Logs</h2>
+				<h2 class="text-lg font-semibold" style="color: rgb(var(--text-primary));">Build Logs</h2>
 				{#if ['building', 'deploying'].includes(deployment.status)}
-					<div class="flex items-center text-sm text-zinc-400">
-						<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500 mr-2"></div>
+					<div class="flex items-center text-sm" style="color: rgb(var(--text-secondary));">
+						<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-800 mr-2"></div>
 						Live
 					</div>
 				{/if}
 			</div>
 
 			{#if logs.length === 0}
-				<div class="text-center py-8 text-zinc-400">
+				<div class="text-center py-8" style="color: rgb(var(--text-secondary));">
 					No logs available yet
 				</div>
 			{:else}
-				<div class="bg-zinc-900 rounded-lg p-4 overflow-x-auto">
+				<div class="rounded-lg p-4 overflow-x-auto" style="background-color: rgb(var(--bg-secondary));">
 					<div class="font-mono text-sm space-y-1">
 						{#each logs as log}
 							<div class={getLogColor(log.log_type)}>
-								<span class="text-zinc-400">[{formatDate(log.created_at)}]</span>
-								<span class="text-zinc-300">{log.log}</span>
+								<span style="color: rgb(var(--text-secondary));">[{formatDate(log.created_at)}]</span>
+								<span style="color: rgb(var(--text-primary));">{log.log}</span>
 							</div>
 						{/each}
 					</div>
@@ -242,7 +242,7 @@
 			{/if}
 
 			{#if deployment.error_message}
-				<div class="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+				<div class="mt-4 p-4 bg-red-50 rounded-lg" style="border: 1px solid #fecaca;">
 					<h3 class="text-sm font-semibold text-red-800 mb-2">Error</h3>
 					<p class="text-sm text-red-700 font-mono">{deployment.error_message}</p>
 				</div>

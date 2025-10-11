@@ -185,13 +185,13 @@
 	function getProviderColor(type: ProviderType) {
 		switch (type) {
 			case 'github':
-				return 'text-zinc-100';
+				return 'color: rgb(var(--text-primary));';
 			case 'gitea':
-				return 'text-green-500';
+				return 'color: #0a6522;';
 			case 'gitlab':
-				return 'text-orange-500';
+				return 'color: #ff6b35;';
 			default:
-				return 'text-zinc-400';
+				return 'color: rgb(var(--text-tertiary));';
 		}
 	}
 </script>
@@ -203,8 +203,8 @@
 <div class="max-w-6xl mx-auto">
 	<div class="mb-6 flex items-center justify-between" in:fly={{ y: -20, duration: 400 }}>
 		<div>
-			<h1 class="text-3xl font-bold text-zinc-100">Git Providers</h1>
-			<p class="mt-1 text-sm text-zinc-400">
+			<h1 class="text-3xl font-bold" style="color: rgb(var(--text-primary));">Git Providers</h1>
+			<p class="mt-1 text-sm" style="color: rgb(var(--text-tertiary));">
 				Manage your Git OAuth providers for seamless repository integration
 			</p>
 		</div>
@@ -229,14 +229,15 @@
 
 	{#if loading}
 		<div class="text-center py-12">
-			<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-			<p class="mt-4 text-zinc-400">Loading providers...</p>
+			<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-800 mx-auto"></div>
+			<p class="mt-4" style="color: rgb(var(--text-tertiary));">Loading providers...</p>
 		</div>
 	{:else if providers.length === 0}
 		<Card>
 			<div class="text-center py-12">
 				<svg
-					class="mx-auto h-12 w-12 text-zinc-500"
+					class="mx-auto h-12 w-12"
+					style="color: rgb(var(--text-tertiary));"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
@@ -248,8 +249,8 @@
 						d="M12 6v6m0 0v6m0-6h6m-6 0H6"
 					/>
 				</svg>
-				<h3 class="mt-2 text-sm font-medium text-zinc-100">No Git providers</h3>
-				<p class="mt-1 text-sm text-zinc-400">Get started by adding your first Git provider.</p>
+				<h3 class="mt-2 text-sm font-medium" style="color: rgb(var(--text-primary));">No Git providers</h3>
+				<p class="mt-1 text-sm" style="color: rgb(var(--text-tertiary));">Get started by adding your first Git provider.</p>
 				<div class="mt-6">
 					<Button onclick={openAddModal}>Add Provider</Button>
 				</div>
@@ -262,17 +263,17 @@
 					<Card>
 						<div class="flex items-start justify-between">
 							<div class="flex items-start space-x-4">
-								<svg class="w-10 h-10 {getProviderColor(provider.type)}" fill="currentColor" viewBox="0 0 24 24">
+								<svg class="w-10 h-10" style="{getProviderColor(provider.type)}" fill="currentColor" viewBox="0 0 24 24">
 									{@html getProviderIcon(provider.type)}
 								</svg>
 								<div>
-									<h3 class="text-lg font-semibold text-zinc-100">{provider.name}</h3>
-									<p class="text-sm text-zinc-400 capitalize">{provider.type}</p>
+									<h3 class="text-lg font-semibold" style="color: rgb(var(--text-primary));">{provider.name}</h3>
+									<p class="text-sm capitalize" style="color: rgb(var(--text-tertiary));">{provider.type}</p>
 									{#if provider.url}
-										<p class="text-xs text-zinc-500 mt-1">{provider.url}</p>
+										<p class="text-xs mt-1" style="color: rgb(var(--text-tertiary));">{provider.url}</p>
 									{/if}
 									{#if provider.connected}
-										<p class="text-sm text-green-500 flex items-center mt-2">
+										<p class="text-sm flex items-center mt-2 bg-primary-800" style="color: rgb(var(--text-primary));">
 											<svg
 												class="w-4 h-4 mr-1"
 												fill="none"
@@ -289,11 +290,12 @@
 											Connected as @{provider.username}
 										</p>
 									{:else}
-										<p class="text-sm text-zinc-500 mt-2">Not connected</p>
+										<p class="text-sm mt-2" style="color: rgb(var(--text-tertiary));">Not connected</p>
 									{/if}
 									{#if provider.is_default}
 										<span
-											class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-500/10 text-green-500 mt-2"
+											class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-primary-800/10 mt-2"
+											style="color: #0a6522;"
 										>
 											Default
 										</span>
@@ -327,9 +329,9 @@
 <!-- Add/Edit Modal -->
 {#if showModal}
 	<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-		<div class="bg-zinc-900 rounded-lg border border-zinc-800 max-w-md w-full max-h-[90vh] overflow-y-auto">
+		<div class="rounded-lg border max-w-md w-full max-h-[90vh] overflow-y-auto" style="background-color: rgb(var(--bg-secondary)); border-color: rgb(var(--border-primary));">
 			<div class="p-6">
-				<h3 class="text-xl font-semibold text-zinc-100 mb-4">
+				<h3 class="text-xl font-semibold mb-4" style="color: rgb(var(--text-primary));">
 					{editingProvider ? 'Edit Provider' : 'Add Git Provider'}
 				</h3>
 
@@ -376,12 +378,12 @@
 					/>
 
 					<!-- OAuth Callback URL -->
-					<div class="p-3 bg-zinc-800/50 rounded-lg border border-zinc-700">
-						<label class="block text-xs font-medium text-zinc-400 mb-2">
+					<div class="p-3 rounded-lg border" style="background-color: rgb(var(--bg-secondary)); border-color: rgb(var(--border-primary));">
+						<label class="block text-xs font-medium mb-2" style="color: rgb(var(--text-tertiary));">
 							OAuth Callback URL
 						</label>
 						<div class="flex items-center space-x-2">
-							<code class="flex-1 text-xs text-green-400 break-all">
+							<code class="flex-1 text-xs break-all" style="color: #0a6522;">
 								{callbackUrl}
 							</code>
 							<button
@@ -391,13 +393,14 @@
 									success = 'Callback URL copied to clipboard!';
 									setTimeout(() => { success = ''; }, 2000);
 								}}
-								class="px-2 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 text-zinc-300 rounded transition-colors"
+								class="px-2 py-1 text-xs rounded transition-colors"
+								style="background-color: rgb(var(--bg-secondary)); color: rgb(var(--text-secondary));"
 								title="Copy to clipboard"
 							>
 								Copy
 							</button>
 						</div>
-						<p class="mt-2 text-xs text-zinc-500">
+						<p class="mt-2 text-xs" style="color: rgb(var(--text-tertiary));">
 							Use this URL when configuring the OAuth application in your {providerType} settings.
 						</p>
 					</div>
@@ -407,9 +410,9 @@
 							id="is-default"
 							type="checkbox"
 							bind:checked={isDefault}
-							class="h-4 w-4 rounded border-zinc-800 text-green-500 focus:ring-green-500"
+							class="h-4 w-4 rounded border-primary-800 bg-primary-800 focus:ring-primary-800"
 						/>
-						<label for="is-default" class="ml-2 text-sm text-zinc-300">
+						<label for="is-default" class="ml-2 text-sm" style="color: rgb(var(--text-secondary));">
 							Set as default provider for {providerType}
 						</label>
 					</div>

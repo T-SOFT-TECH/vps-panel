@@ -3,7 +3,6 @@
 	import { page } from '$app/stores';
 	import Button from './Button.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
-	import { fade, fly } from 'svelte/transition';
 
 	let mobileMenuOpen = $state(false);
 
@@ -18,24 +17,21 @@
 	}
 </script>
 
-<nav class="sticky top-0 z-50 bg-zinc-900/80 dark:bg-zinc-900/80 light:bg-white/80 backdrop-blur-xl border-b border-zinc-800/50 dark:border-zinc-800/50 light:border-zinc-200 shadow-lg">
+<nav class="sticky top-0 z-50 modern-card border-b shadow-lg">
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 		<div class="flex justify-between h-16">
-			<!-- Logo and navigation -->
-			<div class="flex">
-				<!-- Logo -->
-				<div class="flex-shrink-0 flex items-center">
-					<a href="/dashboard" class="flex items-center gap-3 group">
-						<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg transform group-hover:scale-110 transition-transform duration-200">
-							<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
-							</svg>
-						</div>
-						<span class="text-xl font-bold bg-gradient-to-r from-primary-400 to-emerald-400 bg-clip-text text-transparent">
-							VPS Panel
-						</span>
-					</a>
-				</div>
+			<!-- Logo -->
+			<div class="flex items-center">
+				<a href="/dashboard" class="flex items-center gap-3 group">
+					<img
+						src="/img/My Icon.png"
+						alt="TSOFT Logo"
+						class="w-10 h-10 rounded-lg shadow-md group-hover:scale-110 transition-transform duration-200"
+					/>
+					<span class="text-lg font-bold" style="color: rgb(var(--text-primary));">
+						VPS Panel
+					</span>
+				</a>
 
 				<!-- Desktop Navigation -->
 				<div class="hidden sm:ml-8 sm:flex sm:space-x-2">
@@ -44,8 +40,9 @@
 							href={item.href}
 							class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
 							       {isActive(item.href)
-								? 'bg-primary-500/10 text-primary-400 dark:text-primary-400 light:text-primary-600 border border-primary-500/20'
-								: 'text-zinc-400 dark:text-zinc-400 light:text-zinc-600 hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 light:hover:bg-zinc-100 hover:text-zinc-100 dark:hover:text-zinc-100 light:hover:text-zinc-900'}"
+								? 'bg-gradient-brand text-white shadow-md'
+								: 'hover:bg-opacity-50'}"
+							style="color: {isActive(item.href) ? 'white' : 'rgb(var(--text-secondary))'}"
 						>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
@@ -56,24 +53,20 @@
 				</div>
 			</div>
 
-			<!-- Right section: Theme toggle + User menu -->
-			<div class="hidden sm:ml-6 sm:flex sm:items-center sm:gap-3">
-				<!-- Theme Toggle -->
+			<!-- Right section -->
+			<div class="hidden sm:flex sm:items-center sm:gap-3">
 				<ThemeToggle />
 
-				<!-- User Menu -->
 				{#if authStore.user}
-					<div class="flex items-center gap-3 pl-3 border-l border-zinc-700/50 dark:border-zinc-700/50 light:border-zinc-200">
-						<!-- User Avatar & Name -->
+					<div class="flex items-center gap-3 pl-3 border-l" style="border-color: rgb(var(--border-primary));">
 						<div class="flex items-center gap-2">
-							<div class="w-9 h-9 rounded-lg bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-semibold text-sm shadow-lg">
+							<div class="w-9 h-9 rounded-lg bg-gradient-brand flex items-center justify-center text-white font-semibold text-sm shadow-md">
 								{authStore.user.name.charAt(0).toUpperCase()}
 							</div>
-							<span class="text-sm font-medium text-zinc-100 dark:text-zinc-100 light:text-zinc-900">
+							<span class="text-sm font-medium" style="color: rgb(var(--text-primary));">
 								{authStore.user.name}
 							</span>
 						</div>
-						<!-- Sign Out Button -->
 						<Button variant="ghost" size="sm" onclick={() => authStore.logout()}>
 							<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -94,11 +87,9 @@
 				<button
 					type="button"
 					onclick={() => mobileMenuOpen = !mobileMenuOpen}
-					class="inline-flex items-center justify-center p-2 rounded-lg text-zinc-400 dark:text-zinc-400 light:text-zinc-600
-					       hover:text-zinc-100 dark:hover:text-zinc-100 light:hover:text-zinc-900
-					       hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 light:hover:bg-zinc-100
-					       focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-zinc-900 dark:focus:ring-offset-zinc-900 light:focus:ring-offset-white
-					       transition-all duration-200"
+					class="inline-flex items-center justify-center p-2 rounded-lg transition-all duration-200
+					       hover:scale-105"
+					style="color: rgb(var(--text-secondary));"
 					aria-label="Toggle mobile menu"
 				>
 					{#if mobileMenuOpen}
@@ -117,16 +108,16 @@
 
 	<!-- Mobile menu -->
 	{#if mobileMenuOpen}
-		<div class="sm:hidden border-t border-zinc-800/50 dark:border-zinc-800/50 light:border-zinc-200" transition:fly={{ y: -10, duration: 200 }}>
-			<!-- Navigation Links -->
+		<div class="sm:hidden border-t" style="border-color: rgb(var(--border-primary));">
 			<div class="px-2 pt-2 pb-3 space-y-1">
 				{#each navigation as item}
 					<a
 						href={item.href}
 						class="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200
 						       {isActive(item.href)
-							? 'bg-primary-500/10 text-primary-400 dark:text-primary-400 light:text-primary-600 border border-primary-500/20'
-							: 'text-zinc-400 dark:text-zinc-400 light:text-zinc-600 hover:bg-zinc-800/50 dark:hover:bg-zinc-800/50 light:hover:bg-zinc-100 hover:text-zinc-100 dark:hover:text-zinc-100 light:hover:text-zinc-900'}"
+							? 'bg-gradient-brand text-white'
+							: ''}"
+						style="color: {isActive(item.href) ? 'white' : 'rgb(var(--text-secondary))'}"
 					>
 						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
@@ -136,23 +127,18 @@
 				{/each}
 			</div>
 
-			<!-- User Section -->
-			<div class="pt-4 pb-3 border-t border-zinc-800/50 dark:border-zinc-800/50 light:border-zinc-200">
+			<div class="pt-4 pb-3 border-t" style="border-color: rgb(var(--border-primary));">
 				{#if authStore.user}
 					<div class="px-4">
-						<!-- User Info -->
 						<div class="flex items-center mb-3">
-							<div class="flex-shrink-0">
-								<div class="h-12 w-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
-									{authStore.user.name.charAt(0).toUpperCase()}
-								</div>
+							<div class="h-12 w-12 rounded-xl bg-gradient-brand flex items-center justify-center text-white font-bold text-lg shadow-lg">
+								{authStore.user.name.charAt(0).toUpperCase()}
 							</div>
 							<div class="ml-3">
-								<div class="text-base font-semibold text-zinc-100 dark:text-zinc-100 light:text-zinc-900">{authStore.user.name}</div>
-								<div class="text-sm text-zinc-400 dark:text-zinc-400 light:text-zinc-600">{authStore.user.email}</div>
+								<div class="text-base font-semibold" style="color: rgb(var(--text-primary));">{authStore.user.name}</div>
+								<div class="text-sm" style="color: rgb(var(--text-secondary));">{authStore.user.email}</div>
 							</div>
 						</div>
-						<!-- Sign Out Button -->
 						<Button
 							variant="outline"
 							class="w-full"

@@ -179,14 +179,14 @@
 
 {#if loading}
 	<div class="text-center py-12">
-		<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-		<p class="mt-4 text-zinc-400">Loading project...</p>
+		<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-800 mx-auto"></div>
+		<p class="mt-4" style="color: rgb(var(--text-secondary));">Loading project...</p>
 	</div>
 {:else if !project}
 	<Card>
 		<div class="text-center py-12">
-			<h3 class="text-lg font-medium text-zinc-100">Project not found</h3>
-			<p class="mt-1 text-sm text-zinc-400">The project you're looking for doesn't exist.</p>
+			<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Project not found</h3>
+			<p class="mt-1 text-sm" style="color: rgb(var(--text-secondary));">The project you're looking for doesn't exist.</p>
 			<div class="mt-6">
 				<Button onclick={() => window.location.href = '/projects'}>
 					Back to Projects
@@ -198,7 +198,7 @@
 	<div class="space-y-6">
 		<!-- Header -->
 		<div>
-			<a href="/projects" class="text-sm text-green-500 hover:text-green-400 flex items-center mb-4">
+			<a href="/projects" class="flex items-center mb-4 text-sm" style="color: rgb(var(--text-brand));">
 				<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 				</svg>
@@ -208,13 +208,13 @@
 			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 				<div>
 					<div class="flex items-center gap-3">
-						<h1 class="text-3xl font-bold text-zinc-100">{project.name}</h1>
+						<h1 class="text-3xl font-bold" style="color: rgb(var(--text-primary));">{project.name}</h1>
 						<Badge variant={getStatusVariant(project.status)}>
 							{project.status}
 						</Badge>
 					</div>
 					{#if project.description}
-						<p class="mt-1 text-zinc-400">{project.description}</p>
+						<p class="mt-1" style="color: rgb(var(--text-secondary));">{project.description}</p>
 					{/if}
 				</div>
 
@@ -249,15 +249,15 @@
 			<div class="lg:col-span-2 space-y-6">
 				<!-- Deployments -->
 				<Card>
-					<h2 class="text-lg font-semibold text-zinc-100 mb-4">Recent Deployments</h2>
+					<h2 class="text-lg font-semibold mb-4" style="color: rgb(var(--text-primary));">Recent Deployments</h2>
 
 					{#if deployments.length === 0}
 						<div class="text-center py-8">
-							<svg class="mx-auto h-12 w-12 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg class="mx-auto h-12 w-12" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
 							</svg>
-							<h3 class="mt-2 text-sm font-medium text-zinc-100">No deployments yet</h3>
-							<p class="mt-1 text-sm text-zinc-400">Get started by deploying your project.</p>
+							<h3 class="mt-2 text-sm font-medium" style="color: rgb(var(--text-primary));">No deployments yet</h3>
+							<p class="mt-1 text-sm" style="color: rgb(var(--text-secondary));">Get started by deploying your project.</p>
 							<div class="mt-6">
 								<Button onclick={handleDeploy} loading={deploying}>
 									Deploy Now
@@ -269,7 +269,10 @@
 							{#each deployments as deployment}
 								<a
 									href="/projects/{projectId}/deployments/{deployment.id}"
-									class="block hover:bg-zinc-800 -mx-6 px-6 py-4 transition-colors border-b border-zinc-800 last:border-0"
+									class="block -mx-6 px-6 py-4 transition-colors last:border-0"
+									style="border-bottom: 1px solid rgb(var(--border-primary));"
+									onmouseenter={(e) => { e.currentTarget.style.backgroundColor = 'rgb(var(--bg-secondary))'; }}
+									onmouseleave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
 								>
 									<div class="flex items-start justify-between">
 										<div class="flex-1 min-w-0">
@@ -277,14 +280,14 @@
 												<Badge variant={getStatusVariant(deployment.status)}>
 													{deployment.status}
 												</Badge>
-												<span class="text-xs text-zinc-400">
+												<span class="text-xs" style="color: rgb(var(--text-secondary));">
 													{formatRelativeTime(deployment.created_at)}
 												</span>
 											</div>
-											<p class="text-sm font-medium text-zinc-100 truncate">
+											<p class="text-sm font-medium truncate" style="color: rgb(var(--text-primary));">
 												{deployment.commit_message || 'No commit message'}
 											</p>
-											<div class="flex items-center gap-4 mt-2 text-xs text-zinc-400">
+											<div class="flex items-center gap-4 mt-2 text-xs" style="color: rgb(var(--text-secondary));">
 												{#if deployment.commit_hash}
 													<span class="font-mono">{deployment.commit_hash.substring(0, 7)}</span>
 												{/if}
@@ -296,7 +299,7 @@
 												{/if}
 											</div>
 										</div>
-										<svg class="w-5 h-5 text-zinc-500 ml-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<svg class="w-5 h-5 ml-4" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 										</svg>
 									</div>
@@ -311,30 +314,30 @@
 			<div class="space-y-6">
 				<!-- Project Info -->
 				<Card>
-					<h3 class="text-sm font-semibold text-zinc-100 mb-3">Project Information</h3>
+					<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Project Information</h3>
 					<dl class="space-y-3 text-sm">
 						<div>
-							<dt class="text-zinc-400">Framework</dt>
-							<dd class="font-medium text-zinc-100 capitalize">{project.framework}</dd>
+							<dt style="color: rgb(var(--text-secondary));">Framework</dt>
+							<dd class="font-medium capitalize" style="color: rgb(var(--text-primary));">{project.framework}</dd>
 						</div>
 						{#if project.baas_type}
 							<div>
-								<dt class="text-zinc-400">Backend</dt>
-								<dd class="font-medium text-zinc-100 capitalize">{project.baas_type}</dd>
+								<dt style="color: rgb(var(--text-secondary));">Backend</dt>
+								<dd class="font-medium capitalize" style="color: rgb(var(--text-primary));">{project.baas_type}</dd>
 							</div>
 						{/if}
 						<div>
-							<dt class="text-zinc-400">Branch</dt>
-							<dd class="font-medium text-zinc-100">{project.git_branch}</dd>
+							<dt style="color: rgb(var(--text-secondary));">Branch</dt>
+							<dd class="font-medium" style="color: rgb(var(--text-primary));">{project.git_branch}</dd>
 						</div>
 						<div>
-							<dt class="text-zinc-400">Auto Deploy</dt>
-							<dd class="font-medium text-zinc-100">{project.auto_deploy ? 'Enabled' : 'Disabled'}</dd>
+							<dt style="color: rgb(var(--text-secondary));">Auto Deploy</dt>
+							<dd class="font-medium" style="color: rgb(var(--text-primary));">{project.auto_deploy ? 'Enabled' : 'Disabled'}</dd>
 						</div>
 						{#if project.last_deployed}
 							<div>
-								<dt class="text-zinc-400">Last Deployed</dt>
-								<dd class="font-medium text-zinc-100">{formatRelativeTime(project.last_deployed)}</dd>
+								<dt style="color: rgb(var(--text-secondary));">Last Deployed</dt>
+								<dd class="font-medium" style="color: rgb(var(--text-primary));">{formatRelativeTime(project.last_deployed)}</dd>
 							</div>
 						{/if}
 					</dl>
@@ -343,7 +346,7 @@
 				<!-- Domains -->
 				{#if project.domains && project.domains.length > 0}
 					<Card>
-						<h3 class="text-sm font-semibold text-zinc-100 mb-3">Domains</h3>
+						<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Domains</h3>
 						<div class="space-y-2">
 							{#each project.domains as domain}
 								<div class="flex items-center justify-between text-sm">
@@ -351,12 +354,13 @@
 										href="https://{domain.domain}"
 										target="_blank"
 										rel="noopener noreferrer"
-										class="text-green-500 hover:text-green-400 truncate"
+										class="truncate"
+										style="color: rgb(var(--text-brand));"
 									>
 										{domain.domain}
 									</a>
 									{#if domain.ssl_enabled}
-										<svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<svg class="w-4 h-4 text-primary-800 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
 										</svg>
 									{/if}
@@ -369,7 +373,7 @@
 				<!-- Environment Variables -->
 				<Card>
 					<div class="flex items-center justify-between mb-3">
-						<h3 class="text-sm font-semibold text-zinc-100">Environment Variables</h3>
+						<h3 class="text-sm font-semibold" style="color: rgb(var(--text-primary));">Environment Variables</h3>
 						<Button variant="ghost" size="sm" onclick={openAddEnvModal}>
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
@@ -378,29 +382,32 @@
 					</div>
 
 					{#if environments.length === 0}
-						<p class="text-sm text-zinc-400 text-center py-4">
+						<p class="text-sm text-center py-4" style="color: rgb(var(--text-secondary));">
 							No environment variables configured
 						</p>
 					{:else}
 						<div class="space-y-2">
 							{#each environments as env}
-								<div class="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
+								<div class="rounded-lg p-3" style="background-color: rgb(var(--bg-secondary)); border: 1px solid rgb(var(--border-primary));">
 									<div class="flex items-start justify-between gap-2">
 										<div class="flex-1 min-w-0">
 											<div class="flex items-center gap-2 mb-1">
-												<code class="text-xs font-mono text-green-500">{env.key}</code>
+												<code class="text-xs font-mono text-primary-800">{env.key}</code>
 												{#if env.is_secret}
 													<Badge variant="warning">Secret</Badge>
 												{/if}
 											</div>
-											<p class="text-xs text-zinc-400 font-mono break-all">
+											<p class="text-xs font-mono break-all" style="color: rgb(var(--text-secondary));">
 												{env.is_secret ? '••••••••' : env.value}
 											</p>
 										</div>
 										<div class="flex gap-1 flex-shrink-0">
 											<button
 												onclick={() => openEditEnvModal(env)}
-												class="p-1 hover:bg-zinc-700 rounded text-zinc-400 hover:text-zinc-100 transition-colors"
+												class="p-1 rounded transition-colors"
+												style="color: rgb(var(--text-tertiary));"
+												onmouseenter={(e) => { e.currentTarget.style.backgroundColor = 'rgb(var(--bg-primary))'; e.currentTarget.style.color = 'rgb(var(--text-primary))'; }}
+												onmouseleave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'rgb(var(--text-tertiary))'; }}
 												title="Edit"
 											>
 												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -410,7 +417,10 @@
 											<button
 												onclick={() => handleDeleteEnvironment(env.id)}
 												disabled={envDeleting === env.id}
-												class="p-1 hover:bg-red-500/10 rounded text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-50"
+												class="p-1 rounded transition-colors disabled:opacity-50"
+												style="color: rgb(var(--text-tertiary));"
+												onmouseenter={(e) => { if (!e.currentTarget.disabled) { e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)'; e.currentTarget.style.color = '#ef4444'; } }}
+												onmouseleave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'rgb(var(--text-tertiary))'; }}
 												title="Delete"
 											>
 												{#if envDeleting === env.id}
@@ -431,12 +441,13 @@
 
 				<!-- Repository -->
 				<Card>
-					<h3 class="text-sm font-semibold text-zinc-100 mb-3">Repository</h3>
+					<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Repository</h3>
 					<a
 						href={project.git_url}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="text-sm text-green-500 hover:text-green-400 break-all"
+						class="text-sm break-all"
+						style="color: rgb(var(--text-brand));"
 					>
 						{project.git_url}
 					</a>
@@ -448,8 +459,8 @@
 	<!-- Delete Confirmation Modal -->
 	<Modal bind:open={deleteModalOpen} title="Delete Project" size="sm">
 		<div class="space-y-4">
-			<p class="text-sm text-zinc-400">
-				Are you sure you want to delete <strong>{project.name}</strong>? This action cannot be undone.
+			<p class="text-sm" style="color: rgb(var(--text-secondary));">
+				Are you sure you want to delete <strong style="color: rgb(var(--text-primary));">{project.name}</strong>? This action cannot be undone.
 			</p>
 
 			<Alert variant="warning">
@@ -475,7 +486,7 @@
 	>
 		<form onsubmit={(e) => { e.preventDefault(); handleSaveEnvironment(); }} class="space-y-4">
 			<div>
-				<label for="env-key" class="block text-sm font-medium text-zinc-300 mb-2">
+				<label for="env-key" class="block text-sm font-medium mb-2" style="color: rgb(var(--text-primary));">
 					Key
 				</label>
 				<input
@@ -484,16 +495,16 @@
 					bind:value={envForm.key}
 					disabled={editingEnv !== null}
 					placeholder="e.g., PUBLIC_API_URL, DATABASE_URL"
-					class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+					class="modern-input w-full disabled:opacity-50 disabled:cursor-not-allowed"
 					required
 				/>
-				<p class="mt-1 text-xs text-zinc-400">
+				<p class="mt-1 text-xs" style="color: rgb(var(--text-secondary));">
 					Variable name (cannot be changed after creation)
 				</p>
 			</div>
 
 			<div>
-				<label for="env-value" class="block text-sm font-medium text-zinc-300 mb-2">
+				<label for="env-value" class="block text-sm font-medium mb-2" style="color: rgb(var(--text-primary));">
 					Value
 				</label>
 				<textarea
@@ -501,7 +512,7 @@
 					bind:value={envForm.value}
 					placeholder="Enter the value for this environment variable"
 					rows="3"
-					class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+					class="modern-input w-full resize-none"
 					required
 				></textarea>
 			</div>
@@ -512,9 +523,10 @@
 						id="env-secret"
 						type="checkbox"
 						bind:checked={envForm.is_secret}
-						class="w-4 h-4 bg-zinc-800 border-zinc-700 rounded text-green-500 focus:ring-green-500 focus:ring-offset-zinc-900"
+						class="w-4 h-4 rounded text-primary-800 focus:ring-primary-800"
+						style="border-color: rgb(var(--border-primary)); background-color: rgb(var(--bg-secondary));"
 					/>
-					<label for="env-secret" class="text-sm text-zinc-300">
+					<label for="env-secret" class="text-sm" style="color: rgb(var(--text-primary));">
 						Mark as secret (value will be masked in UI)
 					</label>
 				</div>

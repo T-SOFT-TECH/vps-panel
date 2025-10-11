@@ -182,20 +182,20 @@
 
 {#if loadingProject}
 	<div class="text-center py-12">
-		<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
-		<p class="mt-4 text-zinc-400">Loading project...</p>
+		<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-800 mx-auto"></div>
+		<p class="mt-4" style="color: rgb(var(--text-secondary));">Loading project...</p>
 	</div>
 {:else}
 	<div class="max-w-3xl mx-auto">
 		<div class="mb-6">
-			<a href="/projects/{projectId}" class="text-sm text-green-500 hover:text-green-400 flex items-center">
+			<a href="/projects/{projectId}" class="flex items-center text-sm" style="color: rgb(var(--text-brand));">
 				<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 				</svg>
 				Back to Project
 			</a>
-			<h1 class="text-3xl font-bold text-zinc-100 mt-4">Edit Project</h1>
-			<p class="mt-1 text-sm text-zinc-400">Update your project configuration</p>
+			<h1 class="text-3xl font-bold mt-4" style="color: rgb(var(--text-primary));">Edit Project</h1>
+			<p class="mt-1 text-sm" style="color: rgb(var(--text-secondary));">Update your project configuration</p>
 		</div>
 
 		<Card>
@@ -214,7 +214,7 @@
 
 				<!-- Basic Info -->
 				<div class="space-y-4">
-					<h3 class="text-lg font-medium text-zinc-100">Basic Information</h3>
+					<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Basic Information</h3>
 
 					<Input
 						label="Project Name"
@@ -225,7 +225,7 @@
 					/>
 
 					<div>
-						<label for="description" class="block text-sm font-medium text-zinc-300 mb-1">
+						<label for="description" class="block text-sm font-medium mb-1" style="color: rgb(var(--text-primary));">
 							Description
 						</label>
 						<textarea
@@ -234,15 +234,15 @@
 							placeholder="A brief description of your project"
 							rows="3"
 							disabled={loading}
-							class="block w-full rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+							class="modern-input block w-full"
 						></textarea>
 					</div>
 				</div>
 
 				<!-- Git Configuration -->
-				<div class="space-y-4 pt-6 border-t border-zinc-800">
+				<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
 					<div class="flex justify-between items-center">
-						<h3 class="text-lg font-medium text-zinc-100">Git Repository</h3>
+						<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Git Repository</h3>
 						<Button
 							variant="secondary"
 							size="sm"
@@ -277,8 +277,8 @@
 				</div>
 
 				<!-- Framework & Backend -->
-				<div class="space-y-4 pt-6 border-t border-zinc-800">
-					<h3 class="text-lg font-medium text-zinc-100">Framework & Backend</h3>
+				<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
+					<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Framework & Backend</h3>
 
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<Select
@@ -299,8 +299,8 @@
 				</div>
 
 				<!-- Build Configuration -->
-				<div class="space-y-4 pt-6 border-t border-zinc-800">
-					<h3 class="text-lg font-medium text-zinc-100">Build Configuration</h3>
+				<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
+					<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Build Configuration</h3>
 
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<Input
@@ -334,8 +334,8 @@
 				</div>
 
 				<!-- Port Configuration -->
-				<div class="space-y-4 pt-6 border-t border-zinc-800">
-					<h3 class="text-lg font-medium text-zinc-100">Port Configuration</h3>
+				<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
+					<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Port Configuration</h3>
 
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<Input
@@ -359,7 +359,7 @@
 				</div>
 
 				<!-- Deployment Settings -->
-				<div class="pt-6 border-t border-zinc-800">
+				<div class="pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
 					<div class="flex items-start">
 						<div class="flex items-center h-5">
 							<input
@@ -367,14 +367,15 @@
 								type="checkbox"
 								bind:checked={autoDeploy}
 								disabled={loading}
-								class="h-4 w-4 rounded border-zinc-800 text-green-500 focus:ring-green-500"
+								class="h-4 w-4 rounded text-primary-800 focus:ring-primary-800"
+								style="border-color: rgb(var(--border-primary)); background-color: rgb(var(--bg-secondary));"
 							/>
 						</div>
 						<div class="ml-3 text-sm">
-							<label for="auto-deploy" class="font-medium text-zinc-300">
+							<label for="auto-deploy" class="font-medium" style="color: rgb(var(--text-primary));">
 								Auto Deploy
 							</label>
-							<p class="text-zinc-400">
+							<p style="color: rgb(var(--text-secondary));">
 								Automatically deploy when changes are pushed to the repository
 							</p>
 						</div>
@@ -382,7 +383,7 @@
 				</div>
 
 				<!-- Actions -->
-				<div class="flex justify-end space-x-3 pt-6 border-t border-zinc-800">
+				<div class="flex justify-end space-x-3 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
 					<Button variant="ghost" onclick={() => window.history.back()} disabled={loading}>
 						Cancel
 					</Button>

@@ -398,14 +398,14 @@
 
 <div class="max-w-3xl mx-auto">
 	<div class="mb-6" in:fly={{ y: -20, duration: 400, delay: 0 }}>
-		<a href="/projects" class="text-sm text-green-500 hover:text-green-400 flex items-center">
+		<a href="/projects" class="flex items-center text-sm" style="color: rgb(var(--text-brand));">
 			<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 			</svg>
 			Back to Projects
 		</a>
-		<h1 class="text-3xl font-bold text-zinc-100 mt-4">Create New Project</h1>
-		<p class="mt-1 text-sm text-zinc-400">Deploy a new application to your VPS</p>
+		<h1 class="text-3xl font-bold mt-4" style="color: rgb(var(--text-primary));">Create New Project</h1>
+		<p class="mt-1 text-sm" style="color: rgb(var(--text-secondary));">Deploy a new application to your VPS</p>
 	</div>
 
 	<!-- Git Repository Selector -->
@@ -414,8 +414,8 @@
 			<Card>
 				<div class="flex items-center justify-between mb-4">
 					<div>
-						<h2 class="text-lg font-semibold text-zinc-100">Import Git Repository</h2>
-						<p class="text-sm text-zinc-400 mt-1">Select a repository from your connected Git providers</p>
+						<h2 class="text-lg font-semibold" style="color: rgb(var(--text-primary));">Import Git Repository</h2>
+						<p class="text-sm mt-1" style="color: rgb(var(--text-secondary));">Select a repository from your connected Git providers</p>
 					</div>
 					<Button variant="ghost" size="sm" onclick={() => showRepoSelector = false}>
 						Or enter manually →
@@ -425,11 +425,11 @@
 				<!-- Provider Selector -->
 				{#if providers.length > 1}
 					<div class="mb-4">
-						<label class="block text-sm font-medium text-zinc-300 mb-2">Git Provider</label>
+						<label class="block text-sm font-medium mb-2" style="color: rgb(var(--text-primary));">Git Provider</label>
 						<select
 							value={selectedProvider?.id}
 							onchange={(e) => handleProviderChange(Number(e.currentTarget.value))}
-							class="block w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+							class="modern-input block w-full"
 						>
 							{#each providers as provider}
 								<option value={provider.id}>
@@ -446,22 +446,22 @@
 						type="text"
 						placeholder="Search repositories..."
 						bind:value={repoSearchQuery}
-						class="block w-full rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+						class="modern-input block w-full"
 					/>
 				</div>
 
 				<!-- Repository List -->
 				{#if loadingRepos}
 					<div class="text-center py-12">
-						<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto"></div>
-						<p class="mt-4 text-zinc-400">Loading repositories...</p>
+						<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-800 mx-auto"></div>
+						<p class="mt-4" style="color: rgb(var(--text-secondary));">Loading repositories...</p>
 					</div>
 				{:else if filteredRepos.length === 0}
 					<div class="text-center py-12">
-						<svg class="mx-auto h-12 w-12 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg class="mx-auto h-12 w-12" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
 						</svg>
-						<p class="mt-2 text-sm text-zinc-400">
+						<p class="mt-2 text-sm" style="color: rgb(var(--text-secondary));">
 							{repoSearchQuery ? 'No repositories found' : 'No repositories'}
 						</p>
 					</div>
@@ -471,22 +471,25 @@
 							<button
 								type="button"
 								onclick={() => selectRepo(repo)}
-								class="w-full text-left p-4 rounded-lg border border-zinc-800 hover:border-green-500 hover:bg-zinc-800 transition-colors"
+								class="w-full text-left p-4 rounded-lg transition-colors"
+								style="border: 1px solid rgb(var(--border-primary)); background-color: transparent;"
+								onmouseenter={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--text-brand))'; e.currentTarget.style.backgroundColor = 'rgb(var(--bg-secondary))'; }}
+								onmouseleave={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--border-primary))'; e.currentTarget.style.backgroundColor = 'transparent'; }}
 							>
 								<div class="flex items-start justify-between">
 									<div class="flex-1">
 										<div class="flex items-center space-x-2">
-											<svg class="w-5 h-5 text-zinc-400" fill="currentColor" viewBox="0 0 24 24">
+											<svg class="w-5 h-5" style="color: rgb(var(--text-tertiary));" fill="currentColor" viewBox="0 0 24 24">
 												<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
 											</svg>
-											<span class="font-medium text-zinc-100">{repo.name}</span>
+											<span class="font-medium" style="color: rgb(var(--text-primary));">{repo.name}</span>
 											{#if repo.private}
 												<Badge variant="warning">Private</Badge>
 											{/if}
 										</div>
-										<p class="text-xs text-zinc-400 mt-1">{repo.full_name}</p>
+										<p class="text-xs mt-1" style="color: rgb(var(--text-secondary));">{repo.full_name}</p>
 									</div>
-									<svg class="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg class="w-5 h-5" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 									</svg>
 								</div>
@@ -507,12 +510,12 @@
 					<Card>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center space-x-3">
-								<svg class="w-8 h-8 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+								<svg class="w-8 h-8 text-primary-800" fill="currentColor" viewBox="0 0 24 24">
 									<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
 								</svg>
 								<div>
-									<p class="font-medium text-zinc-100">{selectedRepo.full_name}</p>
-									<p class="text-xs text-zinc-400">{selectedRepo.default_branch} branch</p>
+									<p class="font-medium" style="color: rgb(var(--text-primary));">{selectedRepo.full_name}</p>
+									<p class="text-xs" style="color: rgb(var(--text-secondary));">{selectedRepo.default_branch} branch</p>
 								</div>
 							</div>
 							<Button variant="ghost" size="sm" onclick={clearRepoSelection}>
@@ -539,7 +542,7 @@
 
 			<!-- Basic Info -->
 			<div class="space-y-4">
-				<h3 class="text-lg font-medium text-zinc-100">Basic Information</h3>
+				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Basic Information</h3>
 
 				<Input
 					label="Project Name"
@@ -550,7 +553,7 @@
 				/>
 
 				<div>
-					<label for="description" class="block text-sm font-medium text-zinc-300 mb-1">
+					<label for="description" class="block text-sm font-medium mb-1" style="color: rgb(var(--text-primary));">
 						Description
 					</label>
 					<textarea
@@ -559,15 +562,15 @@
 						placeholder="A brief description of your project"
 						rows="3"
 						disabled={loading}
-						class="block w-full rounded-lg border border-zinc-700 bg-zinc-900 text-zinc-100 placeholder:text-zinc-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
+						class="modern-input block w-full"
 					></textarea>
 				</div>
 			</div>
 
 			<!-- Git Configuration -->
-			<div class="space-y-4 pt-6 border-t border-zinc-800">
+			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
 				<div class="flex justify-between items-center">
-					<h3 class="text-lg font-medium text-zinc-100">Git Repository</h3>
+					<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Git Repository</h3>
 					<div class="flex space-x-2">
 						<Button
 							variant="secondary"
@@ -605,20 +608,20 @@
 				/>
 
 				{#if loadingDirectories}
-					<div class="p-4 rounded-lg border border-zinc-800 bg-zinc-900">
+					<div class="p-4 rounded-lg" style="border: 1px solid rgb(var(--border-primary)); background-color: rgb(var(--bg-secondary));">
 						<div class="flex items-center space-x-3">
-							<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-green-500"></div>
-							<p class="text-sm text-zinc-300">Detecting monorepo structure...</p>
+							<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-primary-800"></div>
+							<p class="text-sm" style="color: rgb(var(--text-primary));">Detecting monorepo structure...</p>
 						</div>
 					</div>
 				{/if}
 
 				{#if showDirectorySelector && directories.length > 0}
 					<div class="space-y-3">
-						<label class="block text-sm font-medium text-zinc-300">
+						<label class="block text-sm font-medium" style="color: rgb(var(--text-primary));">
 							Select Directory to Deploy
 						</label>
-						<p class="text-xs text-zinc-400 -mt-2">
+						<p class="text-xs -mt-2" style="color: rgb(var(--text-secondary));">
 							Multiple directories detected in this repository. Choose which one to deploy:
 						</p>
 						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -626,15 +629,18 @@
 								<button
 									type="button"
 									onclick={() => selectDirectory(dir)}
-									class="p-3 rounded-lg border border-zinc-800 hover:border-green-500 hover:bg-zinc-800 transition-colors text-left flex items-center justify-between group"
+									class="p-3 rounded-lg transition-colors text-left flex items-center justify-between group"
+									style="border: 1px solid rgb(var(--border-primary));"
+									onmouseenter={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--text-brand))'; e.currentTarget.style.backgroundColor = 'rgb(var(--bg-secondary))'; }}
+									onmouseleave={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--border-primary))'; e.currentTarget.style.backgroundColor = 'transparent'; }}
 								>
 									<div class="flex items-center space-x-2">
-										<svg class="w-5 h-5 text-zinc-400 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<svg class="w-5 h-5" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
 										</svg>
-										<span class="text-sm font-medium text-zinc-100">{dir}</span>
+										<span class="text-sm font-medium" style="color: rgb(var(--text-primary));">{dir}</span>
 									</div>
-									<svg class="w-5 h-5 text-zinc-500 group-hover:text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg class="w-5 h-5" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 									</svg>
 								</button>
@@ -643,7 +649,8 @@
 						<button
 							type="button"
 							onclick={() => { showDirectorySelector = false; rootDirectory = ''; }}
-							class="text-xs text-zinc-400 hover:text-zinc-300 underline"
+							class="text-xs underline"
+							style="color: rgb(var(--text-secondary));"
 						>
 							Skip - deploy from root directory
 						</button>
@@ -657,7 +664,7 @@
 						placeholder="e.g., frontend, client, packages/web"
 						disabled={loading}
 					/>
-					<p class="text-xs text-zinc-400 -mt-2">
+					<p class="text-xs -mt-2" style="color: rgb(var(--text-secondary));">
 						For monorepos, specify the subdirectory containing your app (e.g., "frontend"). Leave blank if your app is in the root.
 					</p>
 				{/if}
@@ -667,9 +674,10 @@
 						id="private-repo"
 						type="checkbox"
 						bind:checked={showPrivateRepoFields}
-						class="h-4 w-4 rounded border-zinc-800 text-green-500 focus:ring-green-500"
+						class="h-4 w-4 rounded text-primary-800 focus:ring-primary-800"
+						style="border-color: rgb(var(--border-primary)); background-color: rgb(var(--bg-secondary));"
 					/>
-					<label for="private-repo" class="ml-2 text-sm text-zinc-300">
+					<label for="private-repo" class="ml-2 text-sm" style="color: rgb(var(--text-primary));">
 						Private Repository (requires authentication)
 					</label>
 				</div>
@@ -690,7 +698,7 @@
 							disabled={loading}
 						/>
 					</div>
-					<p class="text-xs text-zinc-400">
+					<p class="text-xs" style="color: rgb(var(--text-secondary));">
 						For GitHub, use a personal access token. For GitLab, use a project/personal access token.
 					</p>
 				{/if}
@@ -713,8 +721,8 @@
 			</div>
 
 			<!-- Framework & Backend -->
-			<div class="space-y-4 pt-6 border-t border-zinc-800">
-				<h3 class="text-lg font-medium text-zinc-100">Framework & Backend</h3>
+			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
+				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Framework & Backend</h3>
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<Select
@@ -735,8 +743,8 @@
 			</div>
 
 			<!-- Build Configuration -->
-			<div class="space-y-4 pt-6 border-t border-zinc-800">
-				<h3 class="text-lg font-medium text-zinc-100">Build Configuration</h3>
+			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
+				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Build Configuration</h3>
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<Input
@@ -770,8 +778,8 @@
 			</div>
 
 			<!-- Port Configuration -->
-			<div class="space-y-4 pt-6 border-t border-zinc-800">
-				<h3 class="text-lg font-medium text-zinc-100">Port Configuration</h3>
+			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
+				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Port Configuration</h3>
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<Input
@@ -795,8 +803,8 @@
 			</div>
 
 			<!-- Domain Configuration -->
-			<div class="space-y-4 pt-6 border-t border-zinc-800">
-				<h3 class="text-lg font-medium text-zinc-100">Domain (Optional)</h3>
+			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
+				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Domain (Optional)</h3>
 
 				<Input
 					label="Custom Domain"
@@ -804,13 +812,13 @@
 					placeholder="myapp.example.com"
 					disabled={loading}
 				/>
-				<p class="text-xs text-zinc-400 -mt-2">
+				<p class="text-xs -mt-2" style="color: rgb(var(--text-secondary));">
 					Leave blank to auto-generate a subdomain (e.g., myapp-1.panel.yourdomain.com)
 				</p>
 			</div>
 
 			<!-- Deployment Settings -->
-			<div class="pt-6 border-t border-zinc-800">
+			<div class="pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
 				<div class="flex items-start">
 					<div class="flex items-center h-5">
 						<input
@@ -818,14 +826,15 @@
 							type="checkbox"
 							bind:checked={autoDeploy}
 							disabled={loading}
-							class="h-4 w-4 rounded border-zinc-800 text-green-500 focus:ring-green-500"
+							class="h-4 w-4 rounded text-primary-800 focus:ring-primary-800"
+							style="border-color: rgb(var(--border-primary)); background-color: rgb(var(--bg-secondary));"
 						/>
 					</div>
 					<div class="ml-3 text-sm">
-						<label for="auto-deploy" class="font-medium text-zinc-300">
+						<label for="auto-deploy" class="font-medium" style="color: rgb(var(--text-primary));">
 							Auto Deploy
 						</label>
-						<p class="text-zinc-400">
+						<p style="color: rgb(var(--text-secondary));">
 							Automatically deploy when changes are pushed to the repository
 						</p>
 					</div>
@@ -833,7 +842,7 @@
 			</div>
 
 			<!-- Actions -->
-			<div class="flex justify-end space-x-3 pt-6 border-t border-zinc-800">
+			<div class="flex justify-end space-x-3 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
 				<Button variant="ghost" onclick={() => window.history.back()} disabled={loading}>
 					Cancel
 				</Button>
