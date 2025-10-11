@@ -83,7 +83,7 @@ func Load() *Config {
 
 		// Caddy
 		CaddyConfigPath: getEnv("CADDY_CONFIG_PATH", "/etc/caddy/sites"),
-		CaddyReloadCmd:  getEnv("CADDY_RELOAD_CMD", "systemctl reload caddy"),
+		CaddyReloadCmd:  getEnv("CADDY_RELOAD_CMD", "sudo systemctl reload caddy"),
 
 		// Deployment
 		ProjectsDir:         getEnv("PROJECTS_DIR", "./data/projects"),
