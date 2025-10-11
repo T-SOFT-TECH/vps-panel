@@ -312,6 +312,29 @@ create_panel_user() {
     log_success "User '$PANEL_USER' created"
 }
 
+# Configure sudoers for Caddy reload
+configure_sudoers() {
+    log_info "Configuring sudo permissions for Caddy management..."
+
+    # Create sudoers rule to allow vps-panel user to reload Caddy without password
+    cat > /etc/sudoers.d/vps-panel-caddy << EOF
+# Allow vps-panel user to reload Caddy for SSL certificate provisioning
+$PANEL_USER ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload caddy
+EOF
+
+    # Set proper permissions for sudoers file
+    chmod 440 /etc/sudoers.d/vps-panel-caddy
+
+    # Validate sudoers syntax
+    if visudo -c -f /etc/sudoers.d/vps-panel-caddy &>/dev/null; then
+        log_success "Sudoers configured for automatic SSL certificate provisioning"
+    else
+        log_error "Sudoers syntax validation failed"
+        rm -f /etc/sudoers.d/vps-panel-caddy
+        error_exit "Failed to configure sudoers"
+    fi
+}
+
 # Create directories
 create_directories() {
     log_info "Creating application directories..."
@@ -722,6 +745,7 @@ main() {
 
     # Setup application
     create_panel_user
+    configure_sudoers
     create_directories
     install_application
     build_backend
