@@ -84,6 +84,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	domains := projects.Group("/:id/domains")
 	domains.Get("/", projectHandler.GetDomains)
 	domains.Post("/", projectHandler.AddDomain)
+	domains.Put("/:domainId", projectHandler.UpdateDomain)
 	domains.Delete("/:domainId", projectHandler.DeleteDomain)
 
 	// Webhooks (no auth - validated by secret)

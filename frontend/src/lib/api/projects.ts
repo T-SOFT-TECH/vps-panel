@@ -96,6 +96,14 @@ export const projectsAPI = {
 		return api.post(`/projects/${projectId}/domains`, data);
 	},
 
+	async updateDomain(
+		projectId: number,
+		domainId: number,
+		data: { domain?: string; is_active?: boolean; ssl_enabled?: boolean }
+	): Promise<Domain> {
+		return api.put(`/projects/${projectId}/domains/${domainId}`, data);
+	},
+
 	async deleteDomain(projectId: number, domainId: number): Promise<void> {
 		return api.delete(`/projects/${projectId}/domains/${domainId}`);
 	}

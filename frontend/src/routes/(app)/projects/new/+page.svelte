@@ -740,6 +740,29 @@
 						disabled={loading}
 					/>
 				</div>
+
+				{#if baasType === 'pocketbase'}
+					<div class="p-4 rounded-lg" style="background-color: rgb(var(--bg-secondary)); border-left: 3px solid rgb(10, 101, 34);">
+						<div class="flex items-start space-x-3">
+							<svg class="w-5 h-5 mt-0.5 flex-shrink-0" style="color: rgb(10, 101, 34);" fill="currentColor" viewBox="0 0 24 24">
+								<path d="M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z"/>
+							</svg>
+							<div class="flex-1">
+								<p class="text-sm font-medium mb-1" style="color: rgb(var(--text-primary));">PocketBase Backend</p>
+								<p class="text-xs" style="color: rgb(var(--text-secondary));">
+									PocketBase will be automatically deployed alongside your frontend using the <strong>official binary from GitHub</strong>.
+									Your deployment will include:
+								</p>
+								<ul class="text-xs mt-2 space-y-1 ml-4" style="color: rgb(var(--text-secondary));">
+									<li>• SQLite database with realtime subscriptions</li>
+									<li>• Built-in authentication and file storage</li>
+									<li>• Admin dashboard at <code class="px-1 py-0.5 rounded" style="background-color: rgb(var(--bg-primary)); color: rgb(var(--text-brand));">/_</code></li>
+									<li>• REST and Realtime APIs at <code class="px-1 py-0.5 rounded" style="background-color: rgb(var(--bg-primary)); color: rgb(var(--text-brand));">/api/*</code></li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				{/if}
 			</div>
 
 			<!-- Build Configuration -->

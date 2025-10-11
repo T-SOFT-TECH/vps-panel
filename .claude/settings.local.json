@@ -35,7 +35,10 @@
       "Bash(GOOS=linux GOARCH=amd64 go build -o vps-panel ./cmd/server)",
       "Bash(git restore:*)",
       "Bash(GOOS=linux GOARCH=amd64 go build -o backend/vps-panel-linux ./backend/cmd/server)",
-      "Bash(GOOS=linux GOARCH=amd64 go build -o vps-panel-linux ./cmd/server)"
+      "Bash(GOOS=linux GOARCH=amd64 go build -o vps-panel-linux ./cmd/server)",
+      "Bash(npm run build:*)",
+      "Bash(tar:*)",
+      "Bash(/usr/local/go/bin/go build:*)"
     ],
     "deny": [],
     "ask": []

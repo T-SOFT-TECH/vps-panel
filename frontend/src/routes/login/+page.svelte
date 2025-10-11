@@ -46,7 +46,7 @@
 		<!-- Logo & Title -->
 		<div class="text-center">
 			<img
-				src="/img/My Logo.png"
+				src="/img/My-logo.webp"
 				alt="TSOFT Technologies"
 				class="mx-auto h-20 mb-6"
 			/>

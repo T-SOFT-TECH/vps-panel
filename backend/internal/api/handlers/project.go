@@ -11,6 +11,7 @@ import (
 
 	"github.com/vps-panel/backend/internal/config"
 	"github.com/vps-panel/backend/internal/models"
+	"github.com/vps-panel/backend/internal/services/caddy"
 	"github.com/vps-panel/backend/internal/services/detector"
 	"github.com/vps-panel/backend/internal/services/git"
 )
@@ -417,7 +418,9 @@ func (h *ProjectHandler) AddDomain(c *fiber.Ctx) error {
 	projectID, _ := strconv.ParseUint(c.Params("id"), 10, 32)
 
 	var project models.Project
-	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).
+		Preload("Domains").
+		First(&project).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "Project not found",
 		})
@@ -434,6 +437,13 @@ func (h *ProjectHandler) AddDomain(c *fiber.Ctx) error {
 		})
 	}
 
+	// Validate domain format
+	if req.Domain == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Domain cannot be empty",
+		})
+	}
+
 	domain := models.Domain{
 		ProjectID:  uint(projectID),
 		Domain:     req.Domain,
@@ -442,14 +452,89 @@ func (h *ProjectHandler) AddDomain(c *fiber.Ctx) error {
 	}
 
 	if err := h.db.Create(&domain).Error; err != nil {
+		// Check for duplicate domain error
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "UNIQUE") {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "Domain already exists",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to add domain",
 		})
 	}
 
-	// TODO: Update Caddy configuration
+	// Update Caddy configuration
+	if err := h.updateCaddyForProject(&project); err != nil {
+		// Log error but don't fail the request
+		println("Warning: Failed to update Caddy configuration:", err.Error())
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(domain)
+}
+
+func (h *ProjectHandler) UpdateDomain(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+	projectID, _ := strconv.ParseUint(c.Params("id"), 10, 32)
+	domainID, _ := strconv.ParseUint(c.Params("domainId"), 10, 32)
+
+	// Verify ownership
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).
+		Preload("Domains").
+		First(&project).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Project not found",
+		})
+	}
+
+	var domain models.Domain
+	if err := h.db.Where("id = ? AND project_id = ?", domainID, projectID).First(&domain).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Domain not found",
+		})
+	}
+
+	var req struct {
+		Domain     *string `json:"domain"`
+		IsActive   *bool   `json:"is_active"`
+		SSLEnabled *bool   `json:"ssl_enabled"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	// Update fields if provided
+	if req.Domain != nil {
+		domain.Domain = *req.Domain
+	}
+	if req.IsActive != nil {
+		domain.IsActive = *req.IsActive
+	}
+	if req.SSLEnabled != nil {
+		domain.SSLEnabled = *req.SSLEnabled
+	}
+
+	if err := h.db.Save(&domain).Error; err != nil {
+		// Check for duplicate domain error
+		if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "UNIQUE") {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "Domain already exists",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to update domain",
+		})
+	}
+
+	// Update Caddy configuration
+	if err := h.updateCaddyForProject(&project); err != nil {
+		println("Warning: Failed to update Caddy configuration:", err.Error())
+	}
+
+	return c.JSON(domain)
 }
 
 func (h *ProjectHandler) DeleteDomain(c *fiber.Ctx) error {
@@ -458,9 +543,20 @@ func (h *ProjectHandler) DeleteDomain(c *fiber.Ctx) error {
 	domainID, _ := strconv.ParseUint(c.Params("domainId"), 10, 32)
 
 	var project models.Project
-	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).
+		Preload("Domains").
+		First(&project).Error; err != nil {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
 			"error": "Project not found",
+		})
+	}
+
+	// Check that we're not deleting the last domain
+	var domainCount int64
+	h.db.Model(&models.Domain{}).Where("project_id = ?", projectID).Count(&domainCount)
+	if domainCount <= 1 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Cannot delete the last domain. Projects must have at least one domain.",
 		})
 	}
 
@@ -470,7 +566,10 @@ func (h *ProjectHandler) DeleteDomain(c *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: Update Caddy configuration
+	// Update Caddy configuration
+	if err := h.updateCaddyForProject(&project); err != nil {
+		println("Warning: Failed to update Caddy configuration:", err.Error())
+	}
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -650,6 +749,36 @@ func (h *ProjectHandler) listSubdirectories(rootPath string) ([]string, error) {
 	}
 
 	return directories, nil
+}
+
+// updateCaddyForProject regenerates Caddy configuration for a project
+func (h *ProjectHandler) updateCaddyForProject(project *models.Project) error {
+	// Import caddy service
+	caddyService := caddy.NewCaddyService(h.cfg.CaddyConfigPath, h.cfg.CaddyReloadCmd)
+
+	// Reload domains for the project
+	var updatedProject models.Project
+	if err := h.db.Where("id = ?", project.ID).
+		Preload("Domains").
+		First(&updatedProject).Error; err != nil {
+		return err
+	}
+
+	// Check if project uses PocketBase
+	if updatedProject.BaaSType == models.BaaSPocketBase {
+		// Use PocketBase-specific config
+		if err := caddyService.GenerateConfigWithPocketBase(&updatedProject); err != nil {
+			return err
+		}
+	} else {
+		// Generate standard Caddy config
+		if err := caddyService.GenerateConfig(&updatedProject); err != nil {
+			return err
+		}
+	}
+
+	// Reload Caddy to apply changes
+	return caddyService.Reload()
 }
 
 func randomString(length int) string {

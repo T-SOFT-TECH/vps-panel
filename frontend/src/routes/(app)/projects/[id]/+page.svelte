@@ -9,6 +9,7 @@
 	import Badge from '$lib/components/Badge.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import Alert from '$lib/components/Alert.svelte';
+	import DomainManager from '$lib/components/DomainManager.svelte';
 	import { formatRelativeTime, formatDuration } from '$lib/utils/format';
 	import type { Project, Deployment, Environment } from '$lib/types';
 
@@ -343,31 +344,75 @@
 					</dl>
 				</Card>
 
-				<!-- Domains -->
-				{#if project.domains && project.domains.length > 0}
-					<Card>
-						<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Domains</h3>
-						<div class="space-y-2">
-							{#each project.domains as domain}
-								<div class="flex items-center justify-between text-sm">
-									<a
-										href="https://{domain.domain}"
-										target="_blank"
-										rel="noopener noreferrer"
-										class="truncate"
-										style="color: rgb(var(--text-brand));"
-									>
-										{domain.domain}
-									</a>
-									{#if domain.ssl_enabled}
-										<svg class="w-4 h-4 text-primary-800 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-										</svg>
-									{/if}
+				<!-- Domain Management -->
+				<DomainManager
+					{projectId}
+					bind:domains={project.domains}
+					onUpdate={loadProject}
+				/>
+
+				<!-- PocketBase Access URLs -->
+				{#if project.baas_type === 'pocketbase' && project.domains && project.domains.length > 0}
+					{@const domain = project.domains.find(d => d.is_active)}
+					{#if domain}
+						<Card>
+							<div class="flex items-center gap-2 mb-3">
+								<svg class="w-5 h-5 text-primary-800" fill="currentColor" viewBox="0 0 24 24">
+									<path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/>
+								</svg>
+								<h3 class="text-sm font-semibold" style="color: rgb(var(--text-primary));">PocketBase Access</h3>
+							</div>
+							<div class="space-y-3">
+								<div>
+									<dt class="text-xs font-medium mb-1" style="color: rgb(var(--text-tertiary));">🚀 Frontend</dt>
+									<dd>
+										<a
+											href="https://{domain.domain}"
+											target="_blank"
+											rel="noopener noreferrer"
+											class="text-sm break-all"
+											style="color: rgb(var(--text-brand));"
+										>
+											https://{domain.domain}
+										</a>
+									</dd>
 								</div>
-							{/each}
-						</div>
-					</Card>
+								<div>
+									<dt class="text-xs font-medium mb-1" style="color: rgb(var(--text-tertiary));">🗄️ API Endpoint</dt>
+									<dd>
+										<a
+											href="https://{domain.domain}/api/"
+											target="_blank"
+											rel="noopener noreferrer"
+											class="text-sm break-all font-mono"
+											style="color: rgb(var(--text-brand));"
+										>
+											https://{domain.domain}/api/*
+										</a>
+									</dd>
+								</div>
+								<div>
+									<dt class="text-xs font-medium mb-1" style="color: rgb(var(--text-tertiary));">🔧 Admin Dashboard</dt>
+									<dd>
+										<a
+											href="https://{domain.domain}/_/"
+											target="_blank"
+											rel="noopener noreferrer"
+											class="text-sm break-all font-mono"
+											style="color: rgb(var(--text-brand));"
+										>
+											https://{domain.domain}/_
+										</a>
+									</dd>
+								</div>
+							</div>
+							<div class="mt-4 p-3 rounded-lg" style="background-color: rgb(var(--bg-secondary)); border-left: 3px solid rgb(10, 101, 34);">
+								<p class="text-xs" style="color: rgb(var(--text-secondary));">
+									<strong style="color: rgb(var(--text-primary));">Official PocketBase binary</strong> downloaded from GitHub releases. Data persists in pb_data directory.
+								</p>
+							</div>
+						</Card>
+					{/if}
 				{/if}
 
 				<!-- Environment Variables -->
