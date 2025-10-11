@@ -471,6 +471,9 @@ func (s *DeploymentService) detectFramework(repoPath string) string {
 	content := string(data)
 
 	// Detect framework based on dependencies
+	if strings.Contains(content, `"@angular/core"`) {
+		return "Angular"
+	}
 	if strings.Contains(content, `"@sveltejs/kit"`) || strings.Contains(content, `"@sveltejs/adapter-node"`) {
 		return "SvelteKit"
 	}
@@ -504,6 +507,9 @@ func (s *DeploymentService) detectOutputDirectory(repoPath string) string {
 	content := string(data)
 
 	// Detect framework based on dependencies
+	if strings.Contains(content, `"@angular/core"`) {
+		return "dist" // Angular builds to dist/<project-name>/browser
+	}
 	if strings.Contains(content, `"@sveltejs/kit"`) || strings.Contains(content, `"@sveltejs/adapter-node"`) {
 		return "build"
 	}
@@ -531,42 +537,26 @@ func (s *DeploymentService) generateDockerfile(project *models.Project, repoPath
 		outputDir = s.detectOutputDirectory(repoPath)
 	}
 
+	// Detect framework for specialized Dockerfile generation
+	framework := s.detectFramework(repoPath)
+
+	// Angular needs special handling for nested dist directory
+	if framework == "Angular" {
+		return s.generateAngularDockerfile(nodeVersion)
+	}
+
 	// For SvelteKit, we need to handle the build output differently
 	if outputDir == "build" {
 		return s.generateSvelteKitDockerfile(nodeVersion, outputDir)
 	}
 
-	// Generic Node.js Dockerfile with flexible output directory
-	return fmt.Sprintf(`FROM node:%s-alpine AS builder
+	// Generic static site Dockerfile for frameworks that output static files
+	if outputDir == "dist" || outputDir == ".output" {
+		return s.generateStaticSiteDockerfile(nodeVersion, outputDir)
+	}
 
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
-# Show build output for debugging
-RUN echo "=== Build Output ===" && ls -laR /app
-
-FROM node:%s-alpine
-
-WORKDIR /app
-
-# Copy build output - try multiple possible locations
-COPY --from=builder /app/%s* ./ 2>/dev/null || COPY --from=builder /app/.next ./.next 2>/dev/null || COPY --from=builder /app/dist ./dist 2>/dev/null || COPY --from=builder /app/build ./build
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-
-EXPOSE 3000
-
-ENV PORT=3000
-ENV HOST=0.0.0.0
-ENV NODE_ENV=production
-
-CMD ["node", "index.js"]
-`, nodeVersion, nodeVersion, outputDir)
+	// For Next.js and other server-based frameworks
+	return s.generateServerDockerfile(nodeVersion, outputDir)
 }
 
 // generateSvelteKitDockerfile generates a SvelteKit-specific Dockerfile
@@ -606,6 +596,133 @@ ENV NODE_ENV=production
 
 CMD ["node", "index.js"]
 `, nodeVersion, outputDir, outputDir, nodeVersion, outputDir)
+}
+
+// generateAngularDockerfile generates an Angular-specific Dockerfile
+// Angular builds to dist/<project-name>/browser/
+func (s *DeploymentService) generateAngularDockerfile(nodeVersion string) string {
+	return fmt.Sprintf(`FROM node:%s-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Build the Angular app
+RUN npm run build
+
+# Show the dist directory structure for debugging
+RUN echo "=== Dist Directory Contents ===" && ls -laR /app/dist
+
+# Production stage - serve with express
+FROM node:%s-alpine
+
+WORKDIR /app
+
+# Install a simple HTTP server for Angular
+RUN npm install -g http-server
+
+# Copy the built Angular app
+# Angular outputs to dist/<project-name>/browser/ so we copy everything in dist
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 3000
+
+ENV PORT=3000
+
+# Serve the Angular app from the dist directory
+# The http-server will automatically find the browser folder
+CMD ["sh", "-c", "cd /app/dist && http-server -p $PORT -a 0.0.0.0 --proxy http://localhost:$PORT? $(ls -d */ | head -1)browser"]
+`, nodeVersion, nodeVersion)
+}
+
+// generateStaticSiteDockerfile generates a Dockerfile for static site frameworks (Vite, etc.)
+func (s *DeploymentService) generateStaticSiteDockerfile(nodeVersion, outputDir string) string {
+	return fmt.Sprintf(`FROM node:%s-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Build the app
+RUN npm run build
+
+# Show build output for debugging
+RUN echo "=== Build Output ===" && ls -laR /app/%s
+
+# Production stage - serve with a simple HTTP server
+FROM node:%s-alpine
+
+WORKDIR /app
+
+# Install http-server for serving static files
+RUN npm install -g http-server
+
+# Copy the built static files
+COPY --from=builder /app/%s ./%s
+
+EXPOSE 3000
+
+ENV PORT=3000
+
+# Serve the static files
+CMD ["sh", "-c", "http-server ./%s -p $PORT -a 0.0.0.0 --proxy http://localhost:$PORT?"]
+`, nodeVersion, outputDir, nodeVersion, outputDir, outputDir, outputDir)
+}
+
+// generateServerDockerfile generates a Dockerfile for server-based frameworks (Next.js, etc.)
+func (s *DeploymentService) generateServerDockerfile(nodeVersion, outputDir string) string {
+	return fmt.Sprintf(`FROM node:%s-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Build the app
+RUN npm run build
+
+# Show build output for debugging
+RUN echo "=== Build Output ===" && ls -laR /app
+
+# Production stage
+FROM node:%s-alpine
+
+WORKDIR /app
+
+# Copy build output and dependencies
+COPY --from=builder /app/%s ./%s
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 3000
+
+ENV PORT=3000
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
+
+# Start the server
+CMD ["npm", "start"]
+`, nodeVersion, nodeVersion, outputDir, outputDir)
 }
 
 func (s *DeploymentService) runCommand(workDir, command string) error {
