@@ -231,13 +231,34 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		log.Printf("Warning: failed to reload Caddy: %v", err)
 	}
 
-	// Step 7: Trigger SSL certificate provisioning with retry mechanism
+	// Step 7: Wait for Caddy to provision SSL certificate
+	// Caddy automatically provisions certificates after reload, but it happens asynchronously
+	// We need to wait for this process to complete
 	if len(project.Domains) > 0 {
-		if err := s.provisionSSLCertificate(project, deployment.ID); err != nil {
-			// Don't fail deployment if SSL provisioning fails after retries
-			// The certificate will be automatically obtained on first user access
-			log.Printf("Warning: SSL certificate provisioning incomplete: %v", err)
-			s.logBuild(deployment.ID, err.Error(), "warning")
+		s.logBuild(deployment.ID, "Waiting for SSL certificate provisioning to complete...", "info")
+		s.logBuild(deployment.ID, "Caddy is obtaining SSL certificate from Let's Encrypt...", "info")
+
+		// Wait for Caddy's ACME process to complete (typically takes 5-15 seconds)
+		// This gives Caddy enough time to:
+		// 1. Start the ACME process
+		// 2. Complete the TLS-ALPN-01 challenge
+		// 3. Download and install the certificate
+		time.Sleep(20 * time.Second)
+
+		// Verify certificate was obtained
+		if err := s.verifySSLCertificate(project, deployment.ID); err != nil {
+			// Don't fail deployment, just warn
+			log.Printf("Warning: SSL certificate verification incomplete: %v", err)
+			s.logBuild(deployment.ID, "SSL certificate will be fully active on first user access", "warning")
+		} else {
+			s.logBuild(deployment.ID, "✓ SSL certificate provisioned successfully", "info")
+			// Get the domain to show the user
+			for _, d := range project.Domains {
+				if d.IsActive {
+					s.logBuild(deployment.ID, fmt.Sprintf("Your app is now live at: https://%s", d.Domain), "info")
+					break
+				}
+			}
 		}
 	}
 
@@ -706,10 +727,10 @@ func (s *DeploymentService) ensureProjectDomain(project *models.Project, deploym
 	return nil
 }
 
-// provisionSSLCertificate triggers SSL certificate provisioning by making requests to the domain
-// This forces Caddy to obtain the certificate during deployment rather than on first user access
-// Uses retry mechanism to ensure certificate is successfully obtained
-func (s *DeploymentService) provisionSSLCertificate(project *models.Project, deploymentID uint) error {
+// verifySSLCertificate verifies that SSL certificate was obtained by Caddy
+// After Caddy reload, certificates are obtained automatically but asynchronously
+// This function simply verifies the certificate is working
+func (s *DeploymentService) verifySSLCertificate(project *models.Project, deploymentID uint) error {
 	// Get the first active domain
 	var domain string
 	for _, d := range project.Domains {
@@ -723,61 +744,27 @@ func (s *DeploymentService) provisionSSLCertificate(project *models.Project, dep
 		return fmt.Errorf("no active domain found")
 	}
 
-	// Wait a moment after Caddy reload for it to start accepting connections
-	s.logBuild(deploymentID, "Waiting for reverse proxy to initialize...", "info")
-	time.Sleep(3 * time.Second)
-
-	// Create HTTP client with custom transport that accepts self-signed certs temporarily
+	// Create HTTP client with reasonable timeout
 	client := &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true, // We're just triggering cert provisioning, not validating
+				InsecureSkipVerify: false, // Validate the certificate
 			},
 		},
 	}
 
 	url := fmt.Sprintf("https://%s", domain)
-	maxRetries := 5
-	retryDelay := 5 * time.Second
+	s.logBuild(deploymentID, "Verifying SSL certificate...", "info")
 
-	s.logBuild(deploymentID, fmt.Sprintf("Triggering SSL certificate provisioning for %s...", domain), "info")
-
-	// Retry loop to ensure certificate is obtained
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		s.logBuild(deploymentID, fmt.Sprintf("SSL provisioning attempt %d/%d...", attempt, maxRetries), "info")
-
-		resp, err := client.Get(url)
-		if err == nil {
-			// Success! Certificate was obtained
-			resp.Body.Close()
-			s.logBuild(deploymentID, "✓ SSL certificate obtained successfully", "info")
-			s.logBuild(deploymentID, fmt.Sprintf("Your app is now live at: https://%s", domain), "info")
-			return nil
-		}
-
-		// Log the error for debugging
-		errMsg := err.Error()
-		if strings.Contains(errMsg, "internal error") {
-			// Certificate is still being provisioned
-			s.logBuild(deploymentID, "Certificate provisioning in progress...", "info")
-		} else if strings.Contains(errMsg, "connection refused") {
-			// Caddy not ready yet
-			s.logBuild(deploymentID, "Reverse proxy not ready yet, retrying...", "info")
-		} else {
-			// Other error
-			s.logBuild(deploymentID, fmt.Sprintf("Attempt %d failed: %v", attempt, err), "warning")
-		}
-
-		// Wait before retry (except on last attempt)
-		if attempt < maxRetries {
-			s.logBuild(deploymentID, fmt.Sprintf("Waiting %d seconds before retry...", int(retryDelay.Seconds())), "info")
-			time.Sleep(retryDelay)
-		}
+	// Make a simple HEAD request to verify SSL is working
+	resp, err := client.Head(url)
+	if err != nil {
+		return fmt.Errorf("SSL verification failed: %v", err)
 	}
+	defer resp.Body.Close()
 
-	// All retries exhausted
-	return fmt.Errorf("SSL certificate provisioning timed out after %d attempts. Certificate will be obtained on first user access (may take 10-30 seconds)", maxRetries)
+	return nil
 }
 
 // ensureAvailablePorts checks and assigns available ports to the project
