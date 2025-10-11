@@ -125,7 +125,21 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		s.logBuild(deployment.ID, fmt.Sprintf("Using subdirectory: %s", project.RootDirectory), "info")
 	}
 
-	// Step 2: Detect framework and prepare for deployment
+	// Step 2: Pre-allocate deployment resources (ports and domain)
+	// This must happen BEFORE creating .env file so environment variables can reference the deployment URL
+	s.logBuild(deployment.ID, "Allocating deployment resources...", "info")
+
+	// Allocate ports first
+	if err := s.ensureAvailablePorts(project, deployment.ID); err != nil {
+		return fmt.Errorf("failed to ensure available ports: %w", err)
+	}
+
+	// Pre-generate domain (if needed) so it's available during build
+	if err := s.ensureProjectDomain(project, deployment.ID); err != nil {
+		return fmt.Errorf("failed to ensure project domain: %w", err)
+	}
+
+	// Step 3: Detect framework and prepare for deployment
 	s.logBuild(deployment.ID, "Detecting project structure...", "info")
 
 	// For SvelteKit projects, ensure they have adapter-node
@@ -134,6 +148,7 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 	}
 
 	// Create .env file with environment variables from database
+	// Now includes system variables like DEPLOYMENT_URL since domain is already allocated
 	if err := s.createEnvFile(workDir, project, deployment.ID); err != nil {
 		return fmt.Errorf("failed to create environment file: %w", err)
 	}
@@ -143,7 +158,7 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to create Dockerfile: %w", err)
 	}
 
-	// Step 3: Build Docker image (includes install and build steps)
+	// Step 4: Build Docker image (includes install and build steps)
 	s.logBuild(deployment.ID, "Building Docker image...", "info")
 	imageName := fmt.Sprintf("vps-panel/project-%d:latest", project.ID)
 
@@ -163,12 +178,6 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 			s.logBuild(deployment.ID, "Check your project's build configuration and set the correct output directory in project settings", "error")
 		}
 		return fmt.Errorf("failed to build Docker image: %w", err)
-	}
-
-	// Step 4: Check and assign available ports
-	s.logBuild(deployment.ID, "Checking port availability...", "info")
-	if err := s.ensureAvailablePorts(project, deployment.ID); err != nil {
-		return fmt.Errorf("failed to ensure available ports: %w", err)
 	}
 
 	// Step 5: Deploy container
@@ -212,12 +221,7 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to start container: %w", err)
 	}
 
-	// Step 6: Ensure project has a domain (auto-generate subdomain if needed)
-	if err := s.ensureProjectDomain(project, deployment.ID); err != nil {
-		return fmt.Errorf("failed to ensure project domain: %w", err)
-	}
-
-	// Step 7: Update Caddy configuration
+	// Step 6: Update Caddy configuration (domain was already created in step 2)
 	s.logBuild(deployment.ID, "Updating reverse proxy configuration...", "info")
 	if err := s.caddyService.GenerateConfig(project); err != nil {
 		return fmt.Errorf("failed to generate Caddy config: %w", err)
@@ -227,7 +231,7 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		log.Printf("Warning: failed to reload Caddy: %v", err)
 	}
 
-	// Step 8: Trigger SSL certificate provisioning
+	// Step 7: Trigger SSL certificate provisioning
 	if len(project.Domains) > 0 {
 		s.logBuild(deployment.ID, "Provisioning SSL certificate...", "info")
 		if err := s.provisionSSLCertificate(project, deployment.ID); err != nil {
@@ -241,19 +245,33 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 }
 
 // createEnvFile creates a .env file with environment variables from the database
+// It automatically injects system variables like DEPLOYMENT_URL that are available during build
 func (s *DeploymentService) createEnvFile(workDir string, project *models.Project, deploymentID uint) error {
 	envFilePath := filepath.Join(workDir, ".env")
 
-	// Check if .env already exists
+	// Check if .env already exists in repository
 	if _, err := os.Stat(envFilePath); err == nil {
 		s.logBuild(deploymentID, "Using existing .env file from repository", "info")
-		return nil
-	}
+		s.logBuild(deploymentID, "Note: System variables (DEPLOYMENT_URL, etc.) will still be injected", "info")
 
-	// If no environment variables configured, create empty .env file
-	if len(project.Environments) == 0 {
-		s.logBuild(deploymentID, "No environment variables configured - creating empty .env file", "info")
-		return os.WriteFile(envFilePath, []byte("# No environment variables configured\n"), 0644)
+		// Read existing content
+		existingContent, err := os.ReadFile(envFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to read existing .env file: %w", err)
+		}
+
+		// Prepend system variables
+		var envContent strings.Builder
+		envContent.WriteString("# System variables (auto-injected by VPS Panel)\n")
+		s.writeSystemVariables(&envContent, project)
+		envContent.WriteString("\n# Variables from repository .env file\n")
+		envContent.Write(existingContent)
+
+		if err := os.WriteFile(envFilePath, []byte(envContent.String()), 0644); err != nil {
+			return fmt.Errorf("failed to update .env file: %w", err)
+		}
+
+		return nil
 	}
 
 	// Build .env content from database
@@ -261,16 +279,51 @@ func (s *DeploymentService) createEnvFile(workDir string, project *models.Projec
 	envContent.WriteString("# Environment variables from VPS Panel\n")
 	envContent.WriteString("# Generated at build time\n\n")
 
-	for _, env := range project.Environments {
-		envContent.WriteString(fmt.Sprintf("%s=%s\n", env.Key, env.Value))
+	// Add system variables first
+	envContent.WriteString("# System variables (auto-injected)\n")
+	s.writeSystemVariables(&envContent, project)
+	envContent.WriteString("\n")
+
+	// Add user-configured variables
+	if len(project.Environments) > 0 {
+		envContent.WriteString("# User-configured variables\n")
+		for _, env := range project.Environments {
+			envContent.WriteString(fmt.Sprintf("%s=%s\n", env.Key, env.Value))
+		}
+	} else {
+		envContent.WriteString("# No user-configured environment variables\n")
 	}
 
 	if err := os.WriteFile(envFilePath, []byte(envContent.String()), 0644); err != nil {
 		return fmt.Errorf("failed to write .env file: %w", err)
 	}
 
-	s.logBuild(deploymentID, fmt.Sprintf("Created .env file with %d environment variables", len(project.Environments)), "info")
+	totalVars := len(project.Environments) + 3 // +3 for system variables
+	s.logBuild(deploymentID, fmt.Sprintf("Created .env file with %d environment variables (%d user + 3 system)", totalVars, len(project.Environments)), "info")
 	return nil
+}
+
+// writeSystemVariables writes auto-injected system variables to the .env file
+func (s *DeploymentService) writeSystemVariables(builder *strings.Builder, project *models.Project) {
+	// Get deployment URL from the first active domain
+	deploymentURL := ""
+	deploymentDomain := ""
+	for _, domain := range project.Domains {
+		if domain.IsActive {
+			deploymentDomain = domain.Domain
+			if domain.SSLEnabled {
+				deploymentURL = fmt.Sprintf("https://%s", domain.Domain)
+			} else {
+				deploymentURL = fmt.Sprintf("http://%s", domain.Domain)
+			}
+			break
+		}
+	}
+
+	// Write system variables
+	builder.WriteString(fmt.Sprintf("DEPLOYMENT_URL=%s\n", deploymentURL))
+	builder.WriteString(fmt.Sprintf("DEPLOYMENT_DOMAIN=%s\n", deploymentDomain))
+	builder.WriteString(fmt.Sprintf("PUBLIC_DEPLOYMENT_URL=%s\n", deploymentURL))
 }
 
 func (s *DeploymentService) ensureSvelteKitAdapter(repoPath string, deploymentID uint) error {
