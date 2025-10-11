@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -230,4 +232,92 @@ func (s *DockerService) buildEnvVars(project *models.Project) []string {
 
 func (s *DockerService) Close() error {
 	return s.client.Close()
+}
+
+// ComposeDown stops and removes containers created by docker-compose
+func (s *DockerService) ComposeDown(ctx context.Context, workDir string, projectName string) error {
+	cmd := fmt.Sprintf("docker-compose -f docker-compose.yml -p %s down --remove-orphans", projectName)
+	return execCommand(ctx, workDir, cmd)
+}
+
+// ComposeBuild builds images defined in docker-compose.yml
+func (s *DockerService) ComposeBuild(ctx context.Context, workDir string, projectName string, logFn LogCallback) error {
+	cmd := fmt.Sprintf("docker-compose -f docker-compose.yml -p %s build --no-cache", projectName)
+	return execCommandWithOutput(ctx, workDir, cmd, logFn)
+}
+
+// ComposeUp starts containers defined in docker-compose.yml
+func (s *DockerService) ComposeUp(ctx context.Context, workDir string, projectName string) error {
+	cmd := fmt.Sprintf("docker-compose -f docker-compose.yml -p %s up -d", projectName)
+	return execCommand(ctx, workDir, cmd)
+}
+
+// execCommand executes a shell command in a given directory
+func execCommand(ctx context.Context, workDir string, command string) error {
+	var cmd *exec.Cmd
+
+	if runtime.GOOS == "windows" {
+		cmd = exec.CommandContext(ctx, "cmd", "/C", command)
+	} else {
+		cmd = exec.CommandContext(ctx, "sh", "-c", command)
+	}
+
+	cmd.Dir = workDir
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		return fmt.Errorf("command failed: %w\nOutput: %s", err, string(output))
+	}
+
+	return nil
+}
+
+// execCommandWithOutput executes a command and streams output via callback
+func execCommandWithOutput(ctx context.Context, workDir string, command string, logFn LogCallback) error {
+	var cmd *exec.Cmd
+
+	if runtime.GOOS == "windows" {
+		cmd = exec.CommandContext(ctx, "cmd", "/C", command)
+	} else {
+		cmd = exec.CommandContext(ctx, "sh", "-c", command)
+	}
+
+	cmd.Dir = workDir
+
+	// Capture stdout and stderr
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("failed to get stdout pipe: %w", err)
+	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("failed to get stderr pipe: %w", err)
+	}
+
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to start command: %w", err)
+	}
+
+	// Read stdout in goroutine
+	go func() {
+		scanner := bufio.NewScanner(stdout)
+		for scanner.Scan() {
+			if logFn != nil {
+				logFn(scanner.Text())
+			}
+		}
+	}()
+
+	// Read stderr in goroutine
+	go func() {
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			if logFn != nil {
+				logFn(scanner.Text())
+			}
+		}
+	}()
+
+	return cmd.Wait()
 }

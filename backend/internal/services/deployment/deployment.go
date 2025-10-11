@@ -153,6 +153,25 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to create environment file: %w", err)
 	}
 
+	// Check if project uses PocketBase - if so, use docker-compose multi-container setup
+	if project.BaaSType == models.BaaSPocketBase {
+		s.logBuild(deployment.ID, "Detected PocketBase backend - using multi-container deployment", "info")
+
+		// Ensure PocketBase directory structure
+		if err := s.ensurePocketBaseStructure(workDir, deployment.ID); err != nil {
+			return fmt.Errorf("failed to setup PocketBase structure: %w", err)
+		}
+
+		// Generate docker-compose.yml for multi-container deployment
+		if err := s.generatePocketBaseDeploymentFiles(workDir, project, deployment.ID); err != nil {
+			return fmt.Errorf("failed to generate PocketBase deployment files: %w", err)
+		}
+
+		// Deploy using docker-compose
+		return s.deployWithDockerCompose(ctx, deployment, project, workDir)
+	}
+
+	// For non-PocketBase projects, use single container deployment
 	// Generate Dockerfile if needed
 	if err := s.ensureDockerfile(workDir, project); err != nil {
 		return fmt.Errorf("failed to create Dockerfile: %w", err)

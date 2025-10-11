@@ -173,3 +173,102 @@ func sanitizeProjectName(name string) string {
 	name = strings.ReplaceAll(name, "_", "-")
 	return name
 }
+
+// GenerateConfigWithPocketBase generates Caddy config for projects with PocketBase backend
+func (s *CaddyService) GenerateConfigWithPocketBase(project *models.Project) error {
+	// Ensure config directory exists
+	if err := os.MkdirAll(s.configPath, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// Ensure Caddy log directory exists with proper permissions
+	logDir := "/var/log/caddy"
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return fmt.Errorf("failed to create log directory: %w", err)
+	}
+
+	config := CaddyConfig{
+		ProjectName:  sanitizeProjectName(project.Name),
+		FrontendPort: project.FrontendPort,
+		BackendPort:  project.BackendPort,
+		HasBackend:   true,
+		HasCustomAPI: false, // PocketBase handles its own API routes
+	}
+
+	// Add domains
+	for _, domain := range project.Domains {
+		if domain.IsActive {
+			config.Domains = append(config.Domains, DomainConfig{
+				Domain: domain.Domain,
+			})
+		}
+	}
+
+	// If no domains, skip
+	if len(config.Domains) == 0 {
+		return fmt.Errorf("no active domains configured for project")
+	}
+
+	// Enhanced template for PocketBase with proper routing
+	pocketbaseTemplate := `# {{ .ProjectName }} (with PocketBase)
+{{ range .Domains }}{{ .Domain }}{{ if ne .Domain (index $.Domains 0).Domain }}, {{ end }}{{ end }} {
+    # Enable compression
+    encode gzip zstd
+
+    # PocketBase Admin UI (must come before /api/* to work correctly)
+    handle /_/* {
+        reverse_proxy 127.0.0.1:{{ $.BackendPort }}
+    }
+
+    # PocketBase API routes
+    handle /api/* {
+        reverse_proxy 127.0.0.1:{{ $.BackendPort }}
+    }
+
+    # PocketBase files and realtime
+    handle /files/* {
+        reverse_proxy 127.0.0.1:{{ $.BackendPort }}
+    }
+
+    # Frontend (all other routes)
+    reverse_proxy 127.0.0.1:{{ $.FrontendPort }}
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/{{ $.ProjectName }}.log {
+            roll_size 100MB
+            roll_keep 3
+        }
+        format json
+    }
+}
+`
+
+	// Parse template
+	tmpl, err := template.New("caddy-pocketbase").Parse(pocketbaseTemplate)
+	if err != nil {
+		return fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	// Write config file
+	configFile := filepath.Join(s.configPath, fmt.Sprintf("%s.caddy", config.ProjectName))
+	file, err := os.Create(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to create config file: %w", err)
+	}
+	defer file.Close()
+
+	if err := tmpl.Execute(file, config); err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return nil
+}
