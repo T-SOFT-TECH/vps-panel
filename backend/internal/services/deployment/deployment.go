@@ -231,13 +231,13 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		log.Printf("Warning: failed to reload Caddy: %v", err)
 	}
 
-	// Step 7: Trigger SSL certificate provisioning
+	// Step 7: Trigger SSL certificate provisioning with retry mechanism
 	if len(project.Domains) > 0 {
-		s.logBuild(deployment.ID, "Provisioning SSL certificate...", "info")
 		if err := s.provisionSSLCertificate(project, deployment.ID); err != nil {
-			// Don't fail deployment if SSL provisioning fails, just warn
-			log.Printf("Warning: failed to provision SSL certificate: %v", err)
-			s.logBuild(deployment.ID, "SSL certificate will be obtained on first access (may take 10-30 seconds)", "warning")
+			// Don't fail deployment if SSL provisioning fails after retries
+			// The certificate will be automatically obtained on first user access
+			log.Printf("Warning: SSL certificate provisioning incomplete: %v", err)
+			s.logBuild(deployment.ID, err.Error(), "warning")
 		}
 	}
 
@@ -706,8 +706,9 @@ func (s *DeploymentService) ensureProjectDomain(project *models.Project, deploym
 	return nil
 }
 
-// provisionSSLCertificate triggers SSL certificate provisioning by making a request to the domain
+// provisionSSLCertificate triggers SSL certificate provisioning by making requests to the domain
 // This forces Caddy to obtain the certificate during deployment rather than on first user access
+// Uses retry mechanism to ensure certificate is successfully obtained
 func (s *DeploymentService) provisionSSLCertificate(project *models.Project, deploymentID uint) error {
 	// Get the first active domain
 	var domain string
@@ -722,6 +723,10 @@ func (s *DeploymentService) provisionSSLCertificate(project *models.Project, dep
 		return fmt.Errorf("no active domain found")
 	}
 
+	// Wait a moment after Caddy reload for it to start accepting connections
+	s.logBuild(deploymentID, "Waiting for reverse proxy to initialize...", "info")
+	time.Sleep(3 * time.Second)
+
 	// Create HTTP client with custom transport that accepts self-signed certs temporarily
 	client := &http.Client{
 		Timeout: 30 * time.Second,
@@ -732,21 +737,47 @@ func (s *DeploymentService) provisionSSLCertificate(project *models.Project, dep
 		},
 	}
 
-	// Make HTTPS request to trigger certificate provisioning
 	url := fmt.Sprintf("https://%s", domain)
-	s.logBuild(deploymentID, fmt.Sprintf("Requesting %s to trigger SSL certificate...", url), "info")
+	maxRetries := 5
+	retryDelay := 5 * time.Second
 
-	resp, err := client.Get(url)
-	if err != nil {
-		return fmt.Errorf("failed to trigger SSL provisioning: %w", err)
+	s.logBuild(deploymentID, fmt.Sprintf("Triggering SSL certificate provisioning for %s...", domain), "info")
+
+	// Retry loop to ensure certificate is obtained
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		s.logBuild(deploymentID, fmt.Sprintf("SSL provisioning attempt %d/%d...", attempt, maxRetries), "info")
+
+		resp, err := client.Get(url)
+		if err == nil {
+			// Success! Certificate was obtained
+			resp.Body.Close()
+			s.logBuild(deploymentID, "✓ SSL certificate obtained successfully", "info")
+			s.logBuild(deploymentID, fmt.Sprintf("Your app is now live at: https://%s", domain), "info")
+			return nil
+		}
+
+		// Log the error for debugging
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "internal error") {
+			// Certificate is still being provisioned
+			s.logBuild(deploymentID, "Certificate provisioning in progress...", "info")
+		} else if strings.Contains(errMsg, "connection refused") {
+			// Caddy not ready yet
+			s.logBuild(deploymentID, "Reverse proxy not ready yet, retrying...", "info")
+		} else {
+			// Other error
+			s.logBuild(deploymentID, fmt.Sprintf("Attempt %d failed: %v", attempt, err), "warning")
+		}
+
+		// Wait before retry (except on last attempt)
+		if attempt < maxRetries {
+			s.logBuild(deploymentID, fmt.Sprintf("Waiting %d seconds before retry...", int(retryDelay.Seconds())), "info")
+			time.Sleep(retryDelay)
+		}
 	}
-	defer resp.Body.Close()
 
-	// Wait a moment for certificate to be fully provisioned
-	time.Sleep(2 * time.Second)
-
-	s.logBuild(deploymentID, "✓ SSL certificate provisioned successfully", "info")
-	return nil
+	// All retries exhausted
+	return fmt.Errorf("SSL certificate provisioning timed out after %d attempts. Certificate will be obtained on first user access (may take 10-30 seconds)", maxRetries)
 }
 
 // ensureAvailablePorts checks and assigns available ports to the project
