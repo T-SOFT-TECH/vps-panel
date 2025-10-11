@@ -234,21 +234,21 @@ func (s *DockerService) Close() error {
 	return s.client.Close()
 }
 
-// ComposeDown stops and removes containers created by docker-compose
+// ComposeDown stops and removes containers created by docker compose
 func (s *DockerService) ComposeDown(ctx context.Context, workDir string, projectName string) error {
-	cmd := fmt.Sprintf("docker-compose -f docker-compose.yml -p %s down --remove-orphans", projectName)
+	cmd := fmt.Sprintf("docker compose -f docker-compose.yml -p %s down --remove-orphans", projectName)
 	return execCommand(ctx, workDir, cmd)
 }
 
 // ComposeBuild builds images defined in docker-compose.yml
 func (s *DockerService) ComposeBuild(ctx context.Context, workDir string, projectName string, logFn LogCallback) error {
-	cmd := fmt.Sprintf("docker-compose -f docker-compose.yml -p %s build --no-cache", projectName)
+	cmd := fmt.Sprintf("docker compose -f docker-compose.yml -p %s build --no-cache", projectName)
 	return execCommandWithOutput(ctx, workDir, cmd, logFn)
 }
 
 // ComposeUp starts containers defined in docker-compose.yml
 func (s *DockerService) ComposeUp(ctx context.Context, workDir string, projectName string) error {
-	cmd := fmt.Sprintf("docker-compose -f docker-compose.yml -p %s up -d", projectName)
+	cmd := fmt.Sprintf("docker compose -f docker-compose.yml -p %s up -d", projectName)
 	return execCommand(ctx, workDir, cmd)
 }
 
