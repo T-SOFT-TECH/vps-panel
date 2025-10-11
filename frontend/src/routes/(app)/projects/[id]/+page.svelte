@@ -10,21 +10,30 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import Alert from '$lib/components/Alert.svelte';
 	import { formatRelativeTime, formatDuration } from '$lib/utils/format';
-	import type { Project, Deployment } from '$lib/types';
+	import type { Project, Deployment, Environment } from '$lib/types';
 
 	const projectId = Number($page.params.id);
 
 	let project = $state<Project | null>(null);
 	let deployments = $state<Deployment[]>([]);
+	let environments = $state<Environment[]>([]);
 	let loading = $state(true);
 	let deploying = $state(false);
 	let error = $state('');
 	let deleteModalOpen = $state(false);
 	let deleting = $state(false);
 
+	// Environment Variables state
+	let envModalOpen = $state(false);
+	let editingEnv = $state<Environment | null>(null);
+	let envForm = $state({ key: '', value: '', is_secret: false });
+	let envSaving = $state(false);
+	let envDeleting = $state<number | null>(null);
+
 	onMount(async () => {
 		await loadProject();
 		await loadDeployments();
+		await loadEnvironments();
 	});
 
 	async function loadProject() {
@@ -87,6 +96,79 @@
 				return 'warning';
 			default:
 				return 'info';
+		}
+	}
+
+	// Environment Variables functions
+	async function loadEnvironments() {
+		try {
+			const { environments: envList } = await projectsAPI.getEnvironments(projectId);
+			environments = envList;
+		} catch (err) {
+			console.error('Failed to load environments:', err);
+		}
+	}
+
+	function openAddEnvModal() {
+		editingEnv = null;
+		envForm = { key: '', value: '', is_secret: false };
+		envModalOpen = true;
+	}
+
+	function openEditEnvModal(env: Environment) {
+		editingEnv = env;
+		envForm = { key: env.key, value: env.value, is_secret: env.is_secret };
+		envModalOpen = true;
+	}
+
+	async function handleSaveEnvironment() {
+		if (!envForm.key || !envForm.value) {
+			error = 'Key and value are required';
+			return;
+		}
+
+		envSaving = true;
+		error = '';
+
+		try {
+			if (editingEnv) {
+				// Update existing
+				await projectsAPI.updateEnvironment(projectId, editingEnv.id, {
+					value: envForm.value
+				});
+			} else {
+				// Create new
+				await projectsAPI.addEnvironment(projectId, {
+					key: envForm.key,
+					value: envForm.value,
+					is_secret: envForm.is_secret
+				});
+			}
+
+			await loadEnvironments();
+			envModalOpen = false;
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to save environment variable';
+		} finally {
+			envSaving = false;
+		}
+	}
+
+	async function handleDeleteEnvironment(envId: number) {
+		if (!confirm('Are you sure you want to delete this environment variable?')) {
+			return;
+		}
+
+		envDeleting = envId;
+		error = '';
+
+		try {
+			await projectsAPI.deleteEnvironment(projectId, envId);
+			await loadEnvironments();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to delete environment variable';
+		} finally {
+			envDeleting = null;
 		}
 	}
 </script>
@@ -284,6 +366,69 @@
 					</Card>
 				{/if}
 
+				<!-- Environment Variables -->
+				<Card>
+					<div class="flex items-center justify-between mb-3">
+						<h3 class="text-sm font-semibold text-zinc-100">Environment Variables</h3>
+						<Button variant="ghost" size="sm" onclick={openAddEnvModal}>
+							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+							</svg>
+						</Button>
+					</div>
+
+					{#if environments.length === 0}
+						<p class="text-sm text-zinc-400 text-center py-4">
+							No environment variables configured
+						</p>
+					{:else}
+						<div class="space-y-2">
+							{#each environments as env}
+								<div class="bg-zinc-800 rounded-lg p-3 border border-zinc-700">
+									<div class="flex items-start justify-between gap-2">
+										<div class="flex-1 min-w-0">
+											<div class="flex items-center gap-2 mb-1">
+												<code class="text-xs font-mono text-green-500">{env.key}</code>
+												{#if env.is_secret}
+													<Badge variant="warning">Secret</Badge>
+												{/if}
+											</div>
+											<p class="text-xs text-zinc-400 font-mono break-all">
+												{env.is_secret ? '••••••••' : env.value}
+											</p>
+										</div>
+										<div class="flex gap-1 flex-shrink-0">
+											<button
+												onclick={() => openEditEnvModal(env)}
+												class="p-1 hover:bg-zinc-700 rounded text-zinc-400 hover:text-zinc-100 transition-colors"
+												title="Edit"
+											>
+												<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+												</svg>
+											</button>
+											<button
+												onclick={() => handleDeleteEnvironment(env.id)}
+												disabled={envDeleting === env.id}
+												class="p-1 hover:bg-red-500/10 rounded text-zinc-400 hover:text-red-500 transition-colors disabled:opacity-50"
+												title="Delete"
+											>
+												{#if envDeleting === env.id}
+													<div class="w-4 h-4 animate-spin rounded-full border-2 border-red-500 border-t-transparent"></div>
+												{:else}
+													<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+													</svg>
+												{/if}
+											</button>
+										</div>
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</Card>
+
 				<!-- Repository -->
 				<Card>
 					<h3 class="text-sm font-semibold text-zinc-100 mb-3">Repository</h3>
@@ -320,5 +465,82 @@
 				</Button>
 			</div>
 		</div>
+	</Modal>
+
+	<!-- Environment Variable Add/Edit Modal -->
+	<Modal
+		bind:open={envModalOpen}
+		title={editingEnv ? 'Edit Environment Variable' : 'Add Environment Variable'}
+		size="md"
+	>
+		<form onsubmit={(e) => { e.preventDefault(); handleSaveEnvironment(); }} class="space-y-4">
+			<div>
+				<label for="env-key" class="block text-sm font-medium text-zinc-300 mb-2">
+					Key
+				</label>
+				<input
+					id="env-key"
+					type="text"
+					bind:value={envForm.key}
+					disabled={editingEnv !== null}
+					placeholder="e.g., PUBLIC_API_URL, DATABASE_URL"
+					class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+					required
+				/>
+				<p class="mt-1 text-xs text-zinc-400">
+					Variable name (cannot be changed after creation)
+				</p>
+			</div>
+
+			<div>
+				<label for="env-value" class="block text-sm font-medium text-zinc-300 mb-2">
+					Value
+				</label>
+				<textarea
+					id="env-value"
+					bind:value={envForm.value}
+					placeholder="Enter the value for this environment variable"
+					rows="3"
+					class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+					required
+				></textarea>
+			</div>
+
+			{#if !editingEnv}
+				<div class="flex items-center gap-2">
+					<input
+						id="env-secret"
+						type="checkbox"
+						bind:checked={envForm.is_secret}
+						class="w-4 h-4 bg-zinc-800 border-zinc-700 rounded text-green-500 focus:ring-green-500 focus:ring-offset-zinc-900"
+					/>
+					<label for="env-secret" class="text-sm text-zinc-300">
+						Mark as secret (value will be masked in UI)
+					</label>
+				</div>
+			{/if}
+
+			<Alert variant="info">
+				Environment variables will be available during build and runtime. Changes require a new deployment to take effect.
+			</Alert>
+
+			<div class="flex justify-end gap-3 pt-2">
+				<Button
+					variant="ghost"
+					type="button"
+					onclick={() => envModalOpen = false}
+					disabled={envSaving}
+				>
+					Cancel
+				</Button>
+				<Button
+					type="submit"
+					loading={envSaving}
+					disabled={envSaving}
+				>
+					{envSaving ? 'Saving...' : (editingEnv ? 'Update' : 'Add')} Variable
+				</Button>
+			</div>
+		</form>
 	</Modal>
 {/if}

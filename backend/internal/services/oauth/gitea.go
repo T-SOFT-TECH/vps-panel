@@ -54,8 +54,8 @@ func (s *GiteaService) GetUser(token string) (*GiteaUser, error) {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Gitea uses Bearer token
-	req.Header.Set("Authorization", "token "+token)
+	// Use Bearer token for OAuth2
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
 
 	client := &http.Client{}
@@ -97,7 +97,9 @@ func (s *GiteaService) ListRepositories(token string) ([]GiteaRepo, error) {
 		return nil, err
 	}
 
-	req.Header.Set("Authorization", "token "+token)
+	// Gitea supports both "token" and "Bearer" authorization
+	// Try Bearer first as it's more standard for OAuth2
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
 
 	client := &http.Client{}
@@ -109,7 +111,7 @@ func (s *GiteaService) ListRepositories(token string) ([]GiteaRepo, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("gitea api error: %s", string(body))
+		return nil, fmt.Errorf("gitea api error (status %d): %s", resp.StatusCode, string(body))
 	}
 
 	var repos []GiteaRepo

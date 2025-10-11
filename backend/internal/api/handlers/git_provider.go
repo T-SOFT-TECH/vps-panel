@@ -298,8 +298,9 @@ func (h *GitProviderHandler) listGitHubRepos(c *fiber.Ctx, provider *models.GitP
 
 	repos, err := githubService.ListRepositories(provider.Token)
 	if err != nil {
+		println("Error listing GitHub repositories:", err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to list repositories",
+			"error": "Failed to list repositories: " + err.Error(),
 		})
 	}
 
@@ -318,8 +319,11 @@ func (h *GitProviderHandler) listGiteaRepos(c *fiber.Ctx, provider *models.GitPr
 
 	repos, err := giteaService.ListRepositories(provider.Token)
 	if err != nil {
+		println("Error listing Gitea repositories:", err.Error())
+		println("Provider URL:", provider.URL)
+		println("Provider Token (first 10 chars):", provider.Token[:min(10, len(provider.Token))])
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to list repositories",
+			"error": "Failed to list repositories: " + err.Error(),
 		})
 	}
 

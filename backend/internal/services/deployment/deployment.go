@@ -133,6 +133,11 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 		return fmt.Errorf("failed to prepare SvelteKit project: %w", err)
 	}
 
+	// Create .env file with environment variables from database
+	if err := s.createEnvFile(workDir, project, deployment.ID); err != nil {
+		return fmt.Errorf("failed to create environment file: %w", err)
+	}
+
 	// Generate Dockerfile if needed
 	if err := s.ensureDockerfile(workDir, project); err != nil {
 		return fmt.Errorf("failed to create Dockerfile: %w", err)
@@ -141,7 +146,13 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 	// Step 3: Build Docker image (includes install and build steps)
 	s.logBuild(deployment.ID, "Building Docker image...", "info")
 	imageName := fmt.Sprintf("vps-panel/project-%d:latest", project.ID)
-	if err := s.dockerService.BuildImage(ctx, workDir, imageName); err != nil {
+
+	// Create a log callback that logs to the database
+	logCallback := func(message string) {
+		s.logBuild(deployment.ID, message, "info")
+	}
+
+	if err := s.dockerService.BuildImage(ctx, workDir, imageName, logCallback); err != nil {
 		// Provide helpful error message
 		errorMsg := err.Error()
 		if strings.Contains(errorMsg, "file does not exist") || strings.Contains(errorMsg, "no such file") {
@@ -229,7 +240,39 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 	return nil
 }
 
-// ensureSvelteKitAdapter ensures SvelteKit projects have adapter-node configured
+// createEnvFile creates a .env file with environment variables from the database
+func (s *DeploymentService) createEnvFile(workDir string, project *models.Project, deploymentID uint) error {
+	envFilePath := filepath.Join(workDir, ".env")
+
+	// Check if .env already exists
+	if _, err := os.Stat(envFilePath); err == nil {
+		s.logBuild(deploymentID, "Using existing .env file from repository", "info")
+		return nil
+	}
+
+	// If no environment variables configured, create empty .env file
+	if len(project.Environments) == 0 {
+		s.logBuild(deploymentID, "No environment variables configured - creating empty .env file", "info")
+		return os.WriteFile(envFilePath, []byte("# No environment variables configured\n"), 0644)
+	}
+
+	// Build .env content from database
+	var envContent strings.Builder
+	envContent.WriteString("# Environment variables from VPS Panel\n")
+	envContent.WriteString("# Generated at build time\n\n")
+
+	for _, env := range project.Environments {
+		envContent.WriteString(fmt.Sprintf("%s=%s\n", env.Key, env.Value))
+	}
+
+	if err := os.WriteFile(envFilePath, []byte(envContent.String()), 0644); err != nil {
+		return fmt.Errorf("failed to write .env file: %w", err)
+	}
+
+	s.logBuild(deploymentID, fmt.Sprintf("Created .env file with %d environment variables", len(project.Environments)), "info")
+	return nil
+}
+
 func (s *DeploymentService) ensureSvelteKitAdapter(repoPath string, deploymentID uint) error {
 	packageJSONPath := filepath.Join(repoPath, "package.json")
 	data, err := os.ReadFile(packageJSONPath)
@@ -461,8 +504,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies - use npm install if no lock file, otherwise npm ci
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+# Install dependencies with --legacy-peer-deps to handle peer dependency conflicts
+RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 COPY . .
 RUN npm run build
@@ -478,8 +521,8 @@ WORKDIR /app
 COPY --from=builder /app/%s ./
 COPY --from=builder /app/package*.json ./
 
-# Install only production dependencies
-RUN npm install --production
+# Install only production dependencies with --legacy-peer-deps
+RUN npm install --production --legacy-peer-deps
 
 EXPOSE 3000
 

@@ -31,7 +31,10 @@ func NewDockerService() (*DockerService, error) {
 	return &DockerService{client: cli}, nil
 }
 
-func (s *DockerService) BuildImage(ctx context.Context, buildPath string, imageName string) error {
+// LogCallback is a function type for logging build output
+type LogCallback func(message string)
+
+func (s *DockerService) BuildImage(ctx context.Context, buildPath string, imageName string, logFn LogCallback) error {
 	// Create tar archive from build path
 	buildContext, err := s.createTarArchive(buildPath)
 	if err != nil {
@@ -61,12 +64,20 @@ func (s *DockerService) BuildImage(ctx context.Context, buildPath string, imageN
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Print the output
-		fmt.Println(line)
-
-		// Parse JSON to check for errors
+		// Parse JSON to get the actual output
 		var output buildOutput
 		if err := json.Unmarshal([]byte(line), &output); err == nil {
+			// Log the stream output if present
+			if output.Stream != "" && logFn != nil {
+				// Remove trailing newline as logBuild adds one
+				msg := output.Stream
+				if len(msg) > 0 && msg[len(msg)-1] == '\n' {
+					msg = msg[:len(msg)-1]
+				}
+				logFn(msg)
+			}
+
+			// Check for errors
 			if output.Error != "" {
 				return fmt.Errorf("docker build error: %s", output.Error)
 			}
