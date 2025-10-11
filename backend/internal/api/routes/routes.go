@@ -22,6 +22,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 
 	// Public routes
 	auth := api.Group("/auth")
+	auth.Get("/registration-status", authHandler.CheckRegistrationStatus)
 	auth.Post("/register", authHandler.Register)
 	auth.Post("/login", authHandler.Login)
 	auth.Post("/refresh", authHandler.RefreshToken)

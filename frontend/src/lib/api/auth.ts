@@ -18,7 +18,16 @@ export interface AuthResponse {
 	user: User;
 }
 
+export interface RegistrationStatusResponse {
+	enabled: boolean;
+	message: string;
+}
+
 export const authAPI = {
+	async checkRegistrationStatus(): Promise<RegistrationStatusResponse> {
+		return api.get<RegistrationStatusResponse>('/auth/registration-status', { requiresAuth: false });
+	},
+
 	async login(credentials: LoginRequest): Promise<AuthResponse> {
 		return api.post<AuthResponse>('/auth/login', credentials, { requiresAuth: false });
 	},

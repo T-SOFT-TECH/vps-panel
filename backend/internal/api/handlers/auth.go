@@ -53,6 +53,20 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check if any users exist (single-user mode)
+	var userCount int64
+	if err := h.db.Model(&models.User{}).Count(&userCount).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to check user count",
+		})
+	}
+
+	if userCount > 0 {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Registration is disabled. This panel supports only one user.",
+		})
+	}
+
 	// Check if user already exists
 	var existingUser models.User
 	if err := h.db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
@@ -152,6 +166,25 @@ func (h *AuthHandler) GetCurrentUser(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(user)
+}
+
+func (h *AuthHandler) CheckRegistrationStatus(c *fiber.Ctx) error {
+	var userCount int64
+	if err := h.db.Model(&models.User{}).Count(&userCount).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to check registration status",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"enabled": userCount == 0,
+		"message": func() string {
+			if userCount == 0 {
+				return "Registration is available"
+			}
+			return "Registration is disabled. This panel supports only one user."
+		}(),
+	})
 }
 
 func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
