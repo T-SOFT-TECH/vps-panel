@@ -34,6 +34,13 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) error {
 	api.Get("/auth/oauth/callback/github", authHandler.GitHubOAuthCallback)
 	api.Get("/auth/oauth/callback/gitea", authHandler.GiteaOAuthCallback)
 
+	// Webhook receivers (public - no auth, validated by secret)
+	// IMPORTANT: Must be registered BEFORE protected group to avoid auth middleware
+	webhooks := api.Group("/webhooks")
+	webhooks.Post("/github/:project_id", webhookHandler.HandleGitHub)
+	webhooks.Post("/gitlab/:project_id", webhookHandler.HandleGitLab)
+	webhooks.Post("/gitea/:project_id", webhookHandler.HandleGitea)
+
 	// Protected routes (require authentication)
 	protected := api.Group("", middleware.AuthMiddleware(cfg.JWTSecret))
 
@@ -95,12 +102,6 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) error {
 	webhook.Get("/", webhookHandler.GetWebhookInfo)
 	webhook.Post("/enable", webhookHandler.EnableWebhook)
 	webhook.Post("/disable", webhookHandler.DisableWebhook)
-
-	// Webhook receivers (no auth - validated by secret)
-	webhooks := api.Group("/webhooks")
-	webhooks.Post("/github/:project_id", webhookHandler.HandleGitHub)
-	webhooks.Post("/gitlab/:project_id", webhookHandler.HandleGitLab)
-	webhooks.Post("/gitea/:project_id", webhookHandler.HandleGitea)
 
 	return nil
 }
