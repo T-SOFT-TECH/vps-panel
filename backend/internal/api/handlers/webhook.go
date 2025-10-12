@@ -32,13 +32,7 @@ func NewWebhookHandler(db *gorm.DB, cfg *config.Config) (*WebhookHandler, error)
 		return nil, fmt.Errorf("failed to create deployment service: %w", err)
 	}
 
-	// Get panel URL for webhook service
-	panelURL := cfg.PanelURL
-	if panelURL == "" {
-		panelURL = fmt.Sprintf("http://localhost:%s", cfg.Port)
-	}
-
-	webhookService := webhook.NewService(panelURL)
+	webhookService := webhook.NewService()
 
 	return &WebhookHandler{
 		db:                db,
@@ -483,7 +477,8 @@ func (h *WebhookHandler) EnableWebhook(c *fiber.Ctx) error {
 
 		// If we found a provider, try to create the webhook automatically
 		if provider.ID != 0 {
-			if err := h.webhookService.CreateWebhook(&project, &provider); err != nil {
+			baseURL := getBaseURL(c, h.cfg)
+			if err := h.webhookService.CreateWebhook(&project, &provider, baseURL); err != nil {
 				log.Printf("Failed to auto-create webhook for project %d: %v", project.ID, err)
 				autoCreateError = err.Error()
 			} else {
@@ -493,11 +488,8 @@ func (h *WebhookHandler) EnableWebhook(c *fiber.Ctx) error {
 		}
 	}
 
-	// Generate webhook URLs
-	baseURL := h.cfg.PanelURL
-	if baseURL == "" {
-		baseURL = fmt.Sprintf("http://localhost:%s", h.cfg.Port)
-	}
+	// Generate webhook URLs with auto-detected base URL
+	baseURL := getBaseURL(c, h.cfg)
 
 	response := fiber.Map{
 		"message":      "Webhook enabled successfully",
@@ -558,7 +550,8 @@ func (h *WebhookHandler) DisableWebhook(c *fiber.Ctx) error {
 
 		// If we found a provider, try to delete the webhook automatically
 		if provider.ID != 0 {
-			if err := h.webhookService.DeleteWebhook(&project, &provider); err != nil {
+			baseURL := getBaseURL(c, h.cfg)
+			if err := h.webhookService.DeleteWebhook(&project, &provider, baseURL); err != nil {
 				log.Printf("Failed to auto-delete webhook for project %d: %v", project.ID, err)
 			} else {
 				autoDeleted = true
@@ -609,11 +602,8 @@ func (h *WebhookHandler) GetWebhookInfo(c *fiber.Ctx) error {
 		})
 	}
 
-	// Generate webhook URLs
-	baseURL := h.cfg.PanelURL
-	if baseURL == "" {
-		baseURL = fmt.Sprintf("http://localhost:%s", h.cfg.Port)
-	}
+	// Generate webhook URLs with auto-detected base URL
+	baseURL := getBaseURL(c, h.cfg)
 
 	return c.JSON(fiber.Map{
 		"enabled": true,
@@ -637,4 +627,31 @@ func generateWebhookSecret() string {
 		secret[i] = charset[time.Now().UnixNano()%int64(len(charset))]
 	}
 	return string(secret)
+}
+
+// getBaseURL automatically detects the base URL from the request
+// This eliminates the need for manual PANEL_URL configuration
+func getBaseURL(c *fiber.Ctx, cfg *config.Config) string {
+	// If PANEL_URL is explicitly configured, use it
+	if cfg.PanelURL != "" {
+		return cfg.PanelURL
+	}
+
+	// Auto-detect from request headers
+	scheme := "http"
+	if c.Get("X-Forwarded-Proto") == "https" || c.Protocol() == "https" {
+		scheme = "https"
+	}
+
+	host := c.Get("Host")
+	if host == "" {
+		host = c.Hostname()
+	}
+
+	if host == "" {
+		// Fallback to localhost
+		return fmt.Sprintf("http://localhost:%s", cfg.Port)
+	}
+
+	return fmt.Sprintf("%s://%s", scheme, host)
 }

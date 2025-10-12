@@ -13,44 +13,38 @@ import (
 )
 
 // Service handles automatic webhook creation/deletion via Git provider APIs
-type Service struct {
-	webhookURL string // Base URL for webhooks (e.g., https://panel.example.com/api/v1/webhooks)
-}
+type Service struct{}
 
 // NewService creates a new webhook service
-func NewService(panelURL string) *Service {
-	// Remove trailing slash if present
-	panelURL = strings.TrimSuffix(panelURL, "/")
-	webhookURL := panelURL + "/api/v1/webhooks"
-
-	return &Service{
-		webhookURL: webhookURL,
-	}
+func NewService() *Service {
+	return &Service{}
 }
 
 // CreateWebhook automatically creates a webhook in the Git provider
-func (s *Service) CreateWebhook(project *models.Project, provider *models.GitProvider) error {
+// baseURL should be the panel's base URL (e.g., https://panel.example.com)
+func (s *Service) CreateWebhook(project *models.Project, provider *models.GitProvider, baseURL string) error {
 	switch provider.Type {
 	case "github":
-		return s.createGitHubWebhook(project, provider)
+		return s.createGitHubWebhook(project, provider, baseURL)
 	case "gitlab":
-		return s.createGitLabWebhook(project, provider)
+		return s.createGitLabWebhook(project, provider, baseURL)
 	case "gitea":
-		return s.createGiteaWebhook(project, provider)
+		return s.createGiteaWebhook(project, provider, baseURL)
 	default:
 		return fmt.Errorf("unsupported provider type: %s", provider.Type)
 	}
 }
 
 // DeleteWebhook automatically deletes a webhook from the Git provider
-func (s *Service) DeleteWebhook(project *models.Project, provider *models.GitProvider) error {
+// baseURL should be the panel's base URL (e.g., https://panel.example.com)
+func (s *Service) DeleteWebhook(project *models.Project, provider *models.GitProvider, baseURL string) error {
 	switch provider.Type {
 	case "github":
-		return s.deleteGitHubWebhook(project, provider)
+		return s.deleteGitHubWebhook(project, provider, baseURL)
 	case "gitlab":
-		return s.deleteGitLabWebhook(project, provider)
+		return s.deleteGitLabWebhook(project, provider, baseURL)
 	case "gitea":
-		return s.deleteGiteaWebhook(project, provider)
+		return s.deleteGiteaWebhook(project, provider, baseURL)
 	default:
 		return fmt.Errorf("unsupported provider type: %s", provider.Type)
 	}
@@ -58,14 +52,14 @@ func (s *Service) DeleteWebhook(project *models.Project, provider *models.GitPro
 
 // GitHub Webhook Management
 
-func (s *Service) createGitHubWebhook(project *models.Project, provider *models.GitProvider) error {
+func (s *Service) createGitHubWebhook(project *models.Project, provider *models.GitProvider, baseURL string) error {
 	// Extract owner/repo from Git URL
 	owner, repo, err := parseGitHubURL(project.GitURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse GitHub URL: %w", err)
 	}
 
-	webhookURL := fmt.Sprintf("%s/github/%d", s.webhookURL, project.ID)
+	webhookURL := fmt.Sprintf("%s/api/v1/webhooks/github/%d", strings.TrimSuffix(baseURL, "/"), project.ID)
 
 	payload := map[string]interface{}{
 		"name":   "web",
@@ -83,7 +77,7 @@ func (s *Service) createGitHubWebhook(project *models.Project, provider *models.
 	return s.makeGitHubRequest("POST", apiURL, provider.Token, payload)
 }
 
-func (s *Service) deleteGitHubWebhook(project *models.Project, provider *models.GitProvider) error {
+func (s *Service) deleteGitHubWebhook(project *models.Project, provider *models.GitProvider, baseURL string) error {
 	// Extract owner/repo from Git URL
 	owner, repo, err := parseGitHubURL(project.GitURL)
 	if err != nil {
@@ -91,7 +85,7 @@ func (s *Service) deleteGitHubWebhook(project *models.Project, provider *models.
 	}
 
 	// First, find the webhook ID
-	webhookURL := fmt.Sprintf("%s/github/%d", s.webhookURL, project.ID)
+	webhookURL := fmt.Sprintf("%s/api/v1/webhooks/github/%d", strings.TrimSuffix(baseURL, "/"), project.ID)
 
 	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/hooks", owner, repo)
 
@@ -126,7 +120,7 @@ func (s *Service) deleteGitHubWebhook(project *models.Project, provider *models.
 
 // GitLab Webhook Management
 
-func (s *Service) createGitLabWebhook(project *models.Project, provider *models.GitProvider) error {
+func (s *Service) createGitLabWebhook(project *models.Project, provider *models.GitProvider, baseURL string) error {
 	projectPath, err := parseGitLabURL(project.GitURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse GitLab URL: %w", err)
@@ -135,7 +129,7 @@ func (s *Service) createGitLabWebhook(project *models.Project, provider *models.
 	// URL encode the project path
 	encodedPath := strings.ReplaceAll(projectPath, "/", "%2F")
 
-	webhookURL := fmt.Sprintf("%s/gitlab/%d", s.webhookURL, project.ID)
+	webhookURL := fmt.Sprintf("%s/api/v1/webhooks/gitlab/%d", strings.TrimSuffix(baseURL, "/"), project.ID)
 
 	payload := map[string]interface{}{
 		"url":                    webhookURL,
@@ -149,14 +143,14 @@ func (s *Service) createGitLabWebhook(project *models.Project, provider *models.
 	return s.makeGitLabRequest("POST", apiURL, provider.Token, payload)
 }
 
-func (s *Service) deleteGitLabWebhook(project *models.Project, provider *models.GitProvider) error {
+func (s *Service) deleteGitLabWebhook(project *models.Project, provider *models.GitProvider, baseURL string) error {
 	projectPath, err := parseGitLabURL(project.GitURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse GitLab URL: %w", err)
 	}
 
 	encodedPath := strings.ReplaceAll(projectPath, "/", "%2F")
-	webhookURL := fmt.Sprintf("%s/gitlab/%d", s.webhookURL, project.ID)
+	webhookURL := fmt.Sprintf("%s/api/v1/webhooks/gitlab/%d", strings.TrimSuffix(baseURL, "/"), project.ID)
 
 	// Get all webhooks
 	apiURL := fmt.Sprintf("https://gitlab.com/api/v4/projects/%s/hooks", encodedPath)
@@ -188,14 +182,14 @@ func (s *Service) deleteGitLabWebhook(project *models.Project, provider *models.
 
 // Gitea Webhook Management
 
-func (s *Service) createGiteaWebhook(project *models.Project, provider *models.GitProvider) error {
+func (s *Service) createGiteaWebhook(project *models.Project, provider *models.GitProvider, baseURL string) error {
 	// Get Gitea host from provider configuration or project URL
 	giteaHost, owner, repo, err := parseGiteaURL(project.GitURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse Gitea URL: %w", err)
 	}
 
-	webhookURL := fmt.Sprintf("%s/gitea/%d", s.webhookURL, project.ID)
+	webhookURL := fmt.Sprintf("%s/api/v1/webhooks/gitea/%d", strings.TrimSuffix(baseURL, "/"), project.ID)
 
 	payload := map[string]interface{}{
 		"type":   "gitea",
@@ -212,13 +206,13 @@ func (s *Service) createGiteaWebhook(project *models.Project, provider *models.G
 	return s.makeGiteaRequest("POST", apiURL, provider.Token, payload)
 }
 
-func (s *Service) deleteGiteaWebhook(project *models.Project, provider *models.GitProvider) error {
+func (s *Service) deleteGiteaWebhook(project *models.Project, provider *models.GitProvider, baseURL string) error {
 	giteaHost, owner, repo, err := parseGiteaURL(project.GitURL)
 	if err != nil {
 		return fmt.Errorf("failed to parse Gitea URL: %w", err)
 	}
 
-	webhookURL := fmt.Sprintf("%s/gitea/%d", s.webhookURL, project.ID)
+	webhookURL := fmt.Sprintf("%s/api/v1/webhooks/gitea/%d", strings.TrimSuffix(baseURL, "/"), project.ID)
 
 	// Get all webhooks
 	apiURL := fmt.Sprintf("%s/api/v1/repos/%s/%s/hooks", giteaHost, owner, repo)
