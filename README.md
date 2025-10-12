@@ -96,6 +96,8 @@ The automated installation script will:
 git clone https://github.com/yourusername/vps-panel.git
 cd vps-panel
 
+sudo chmod +x install.sh
+
 # Run the installation script
 sudo ./install.sh
 ```
