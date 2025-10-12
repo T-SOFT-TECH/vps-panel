@@ -4,11 +4,27 @@
 	import Input from '$lib/components/Input.svelte';
 	import Alert from '$lib/components/Alert.svelte';
 	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
+	import {onMount} from "svelte";
+	import {authAPI} from "$lib/api/auth";
 
 	let email = $state('');
 	let password = $state('');
 	let loading = $state(false);
 	let error = $state('');
+	let registrationEnabled = $state(true);
+	let checkingStatus = $state(true);
+
+	onMount(async () => {
+		try {
+			const status = await authAPI.checkRegistrationStatus();
+			registrationEnabled = status.enabled;
+
+		} catch (err) {
+			console.error('Failed to check registration status:', err);
+		} finally {
+			checkingStatus = false;
+		}
+	});
 
 	async function handleLogin(e: Event) {
 		e.preventDefault();
@@ -171,6 +187,7 @@
 					</div>
 				</form>
 
+				{#if registrationEnabled}
 				<!-- Divider -->
 				<div class="relative my-8">
 					<div class="absolute inset-0 flex items-center">
@@ -196,6 +213,7 @@
 						Create New Account
 					</a>
 				</div>
+					{/if}
 			</div>
 
 			<!-- Security Badge -->

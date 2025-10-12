@@ -34,11 +34,26 @@
 	let setupModalOpen = $state(false);
 	let selectedProvider = $state<'github' | 'gitlab' | 'gitea'>('github');
 
+	// Validate projectId
+	$effect(() => {
+		if (!projectId || isNaN(projectId)) {
+			loading = false;
+			error = 'Invalid project ID';
+		}
+	});
+
 	onMount(async () => {
-		await loadWebhookInfo();
+		if (projectId && !isNaN(projectId)) {
+			await loadWebhookInfo();
+		}
 	});
 
 	async function loadWebhookInfo() {
+		if (!projectId || isNaN(projectId)) {
+			loading = false;
+			return;
+		}
+
 		loading = true;
 		try {
 			const response = await fetch(`${API_BASE_URL}/projects/${projectId}/webhook`, {
@@ -59,6 +74,8 @@
 	}
 
 	async function enableWebhook() {
+		if (!projectId || isNaN(projectId)) return;
+
 		enabling = true;
 		error = '';
 		success = '';
@@ -96,6 +113,8 @@
 	}
 
 	async function disableWebhook() {
+		if (!projectId || isNaN(projectId)) return;
+
 		if (!confirm('Are you sure you want to disable auto-deploy? You can re-enable it anytime.')) {
 			return;
 		}

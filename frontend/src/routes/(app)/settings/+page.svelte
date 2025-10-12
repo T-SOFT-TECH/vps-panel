@@ -58,7 +58,7 @@
 	<title>Settings - VPS Panel</title>
 </svelte:head>
 
-<div class="max-w-4xl mx-auto space-y-6 pb-8">
+<div class="max-w-7xl mx-auto space-y-6 pb-8">
 	<!-- Header with Gradient Background -->
 	<div class="relative overflow-hidden rounded-2xl slide-in-down">
 		<div class="absolute inset-0 mesh-gradient opacity-50"></div>

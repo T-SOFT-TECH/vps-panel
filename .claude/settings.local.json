@@ -40,7 +40,9 @@
       "Bash(tar:*)",
       "Bash(/usr/local/go/bin/go build:*)",
       "Bash(GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(cat:*)",
+      "Bash(cd:*)"
     ],
     "deny": [],
     "ask": []

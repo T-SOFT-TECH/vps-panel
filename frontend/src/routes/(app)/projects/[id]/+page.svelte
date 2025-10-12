@@ -9,10 +9,11 @@
 	import Badge from '$lib/components/Badge.svelte';
 	import Modal from '$lib/components/Modal.svelte';
 	import Alert from '$lib/components/Alert.svelte';
-	import DomainManager from '$lib/components/DomainManager.svelte';
+	import DomainManager from "$lib/components/DomainManager.svelte";
 	import WebhookConfig from '$lib/components/WebhookConfig.svelte';
 	import { formatRelativeTime, formatDuration } from '$lib/utils/format';
 	import type { Project, Deployment, Environment } from '$lib/types';
+
 
 	const projectId = Number($page.params.id);
 
@@ -32,6 +33,8 @@
 	let envSaving = $state(false);
 	let envDeleting = $state<number | null>(null);
 
+
+
 	onMount(async () => {
 		await loadProject();
 		await loadDeployments();
@@ -41,6 +44,10 @@
 	async function loadProject() {
 		try {
 			project = await projectsAPI.getById(projectId);
+			// Ensure domains is always an array
+			if (project && !project.domains) {
+				project.domains = [];
+			}
 		} catch (err) {
 			error = 'Failed to load project';
 			console.error(err);
@@ -400,6 +407,7 @@
 				</div>
 
 				<!-- Domain Management -->
+
 				<DomainManager
 					{projectId}
 					bind:domains={project.domains}
