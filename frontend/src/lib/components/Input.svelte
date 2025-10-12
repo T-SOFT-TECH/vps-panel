@@ -45,7 +45,7 @@
 		{name}
 		id={inputId}
 		bind:value
-		class="w-full px-4 py-3 rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-600 disabled:opacity-50 disabled:cursor-not-allowed {error ? 'border-2 border-red-500 focus:ring-red-500' : 'border'} {className}"
+		class="w-full px-4 py-3  rounded-xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-600 disabled:opacity-50 disabled:cursor-not-allowed {error ? 'border-2 border-red-500 focus:ring-red-500' : 'border'} "
 		style="background-color: rgb(var(--bg-tertiary)); border-color: {error ? '#ef4444' : 'rgb(var(--border-primary))'}; color: rgb(var(--text-primary));"
 	/>
 	{#if error}

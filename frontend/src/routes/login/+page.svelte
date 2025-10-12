@@ -55,11 +55,11 @@
 		<div class="w-full max-w-md space-y-8">
 			<!-- Logo & Title -->
 			<div class="text-center scale-up">
-				<div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-brand shadow-xl glow-green mb-6 float">
+				<div class="inline-flex items-center justify-center rounded-2xl  mb-6 ">
 					<img
-						src="/img/My-Icon.webp"
+						src="/img/My-logo.webp"
 						alt="TSOFT Technologies"
-						class="w-16 h-16 rounded-xl"
+						class="h-20 rounded-xl"
 					/>
 				</div>
 				<h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
@@ -103,7 +103,7 @@
 									placeholder="you@example.com"
 									required
 									disabled={loading}
-									class="modern-input pl-12 hover-lift"
+									class="modern-input  hover-lift"
 								/>
 							</div>
 						</div>
