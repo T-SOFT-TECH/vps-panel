@@ -547,7 +547,9 @@
 				</div>
 
 				<!-- Webhook Auto-Deploy Configuration -->
-				<WebhookConfig {projectId} />
+				{#if project && projectId && !isNaN(projectId)}
+					<WebhookConfig {projectId} />
+				{/if}
 
 				<!-- Repository -->
 				<div class="modern-card p-5 hover-lift transition-all">
