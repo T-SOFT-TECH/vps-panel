@@ -431,7 +431,7 @@ func (h *WebhookHandler) EnableWebhook(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 
 	// Parse user ID from JWT
-	userID := c.Locals("user_id").(uint)
+	userID := c.Locals("userID").(uint)
 
 	var project models.Project
 	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
@@ -529,7 +529,7 @@ func (h *WebhookHandler) DisableWebhook(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 
 	// Parse user ID from JWT
-	userID := c.Locals("user_id").(uint)
+	userID := c.Locals("userID").(uint)
 
 	var project models.Project
 	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
@@ -594,7 +594,7 @@ func (h *WebhookHandler) GetWebhookInfo(c *fiber.Ctx) error {
 	projectID := c.Params("id")
 
 	// Parse user ID from JWT
-	userID := c.Locals("user_id").(uint)
+	userID := c.Locals("userID").(uint)
 
 	var project models.Project
 	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
