@@ -24,7 +24,7 @@
 			<div class="flex items-center">
 				<a href="/dashboard" class="flex items-center gap-3 group">
 					<img
-						src="/img/My Icon.png"
+						src="/img/My-Icon.webp"
 						alt="TSOFT Logo"
 						class="w-10 h-10 rounded-lg shadow-md group-hover:scale-110 transition-transform duration-200"
 					/>

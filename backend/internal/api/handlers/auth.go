@@ -577,7 +577,16 @@ func (h *AuthHandler) GiteaOAuthCallback(c *fiber.Ctx) error {
 	// Update provider with OAuth connection
 	provider.Connected = true
 	provider.Token = token.AccessToken
-	provider.Username = giteaUser.Login
+	// Use username field instead of login for Gitea
+	if giteaUser.Username != "" {
+		provider.Username = giteaUser.Username
+	} else {
+		provider.Username = giteaUser.Login
+	}
+
+	if h.cfg.IsDevelopment() {
+		println("Gitea OAuth Success - Username:", provider.Username, "Token:", token.AccessToken[:min(20, len(token.AccessToken))])
+	}
 
 	if err := h.db.Save(&provider).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{

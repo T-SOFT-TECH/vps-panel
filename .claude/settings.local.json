@@ -38,7 +38,9 @@
       "Bash(GOOS=linux GOARCH=amd64 go build -o vps-panel-linux ./cmd/server)",
       "Bash(npm run build:*)",
       "Bash(tar:*)",
-      "Bash(/usr/local/go/bin/go build:*)"
+      "Bash(/usr/local/go/bin/go build:*)",
+      "Bash(GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

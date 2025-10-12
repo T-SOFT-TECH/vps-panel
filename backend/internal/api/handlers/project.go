@@ -26,7 +26,8 @@ func NewProjectHandler(db *gorm.DB, cfg *config.Config) *ProjectHandler {
 }
 
 // resolveGitCredentials resolves OAuth placeholder tokens to actual credentials
-func (h *ProjectHandler) resolveGitCredentials(userID uint, username, token string) (string, string) {
+// Returns empty strings if OAuth provider is not connected
+func (h *ProjectHandler) resolveGitCredentials(userID uint, username, token string) (string, string, error) {
 	// Check if token is an OAuth placeholder (e.g., "github_oauth", "gitea_oauth")
 	if strings.HasSuffix(token, "_oauth") {
 		providerType := strings.TrimSuffix(token, "_oauth")
@@ -35,7 +36,10 @@ func (h *ProjectHandler) resolveGitCredentials(userID uint, username, token stri
 		var provider models.GitProvider
 		if err := h.db.Where("user_id = ? AND type = ? AND connected = ?", userID, providerType, true).
 			First(&provider).Error; err == nil {
-			return provider.Username, provider.Token
+			if h.cfg.IsDevelopment() {
+				println("Resolved OAuth credentials for provider:", providerType, "Username:", provider.Username)
+			}
+			return provider.Username, provider.Token, nil
 		}
 
 		// Fallback to legacy user fields for backward compatibility
@@ -44,18 +48,21 @@ func (h *ProjectHandler) resolveGitCredentials(userID uint, username, token stri
 			switch providerType {
 			case "github":
 				if user.GitHubConnected {
-					return user.GitHubUsername, user.GitHubToken
+					return user.GitHubUsername, user.GitHubToken, nil
 				}
 			case "gitea":
 				if user.GiteaConnected {
-					return user.GiteaUsername, user.GiteaToken
+					return user.GiteaUsername, user.GiteaToken, nil
 				}
 			}
 		}
+
+		// OAuth provider not found or not connected
+		return "", "", fiber.NewError(fiber.StatusUnauthorized, "Git provider not connected. Please reconnect your "+providerType+" account.")
 	}
 
 	// Return credentials as-is if not OAuth placeholder
-	return username, token
+	return username, token, nil
 }
 
 type CreateProjectRequest struct {
@@ -154,7 +161,12 @@ func (h *ProjectHandler) Create(c *fiber.Ctx) error {
 	}
 
 	// Resolve OAuth placeholder tokens to actual credentials
-	gitUsername, gitToken := h.resolveGitCredentials(userID, req.GitUsername, req.GitToken)
+	gitUsername, gitToken, err := h.resolveGitCredentials(userID, req.GitUsername, req.GitToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
 
 	project := models.Project{
 		UserID:         userID,
@@ -597,7 +609,14 @@ func (h *ProjectHandler) DetectFramework(c *fiber.Ctx) error {
 	}
 
 	// Resolve OAuth placeholder tokens to actual credentials
-	req.GitUsername, req.GitToken = h.resolveGitCredentials(userID, req.GitUsername, req.GitToken)
+	resolvedUsername, resolvedToken, err := h.resolveGitCredentials(userID, req.GitUsername, req.GitToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	req.GitUsername = resolvedUsername
+	req.GitToken = resolvedToken
 
 	// Create temporary directory for cloning
 	tempBaseDir := os.TempDir()
@@ -653,7 +672,14 @@ func (h *ProjectHandler) ListBranches(c *fiber.Ctx) error {
 	}
 
 	// Resolve OAuth placeholder tokens to actual credentials
-	req.GitUsername, req.GitToken = h.resolveGitCredentials(userID, req.GitUsername, req.GitToken)
+	resolvedUsername, resolvedToken, err := h.resolveGitCredentials(userID, req.GitUsername, req.GitToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	req.GitUsername = resolvedUsername
+	req.GitToken = resolvedToken
 
 	branches, err := git.ListBranches(req.GitURL, req.GitUsername, req.GitToken)
 	if err != nil {
@@ -689,7 +715,18 @@ func (h *ProjectHandler) ListDirectories(c *fiber.Ctx) error {
 	}
 
 	// Resolve OAuth placeholder tokens
-	req.GitUsername, req.GitToken = h.resolveGitCredentials(userID, req.GitUsername, req.GitToken)
+	resolvedUsername, resolvedToken, err := h.resolveGitCredentials(userID, req.GitUsername, req.GitToken)
+	if err != nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	req.GitUsername = resolvedUsername
+	req.GitToken = resolvedToken
+
+	if h.cfg.IsDevelopment() {
+		println("ListDirectories - Cloning:", req.GitURL, "Branch:", req.GitBranch, "HasCredentials:", req.GitUsername != "" && req.GitToken != "")
+	}
 
 	// Create temporary directory for cloning
 	tempBaseDir := os.TempDir()
@@ -705,8 +742,11 @@ func (h *ProjectHandler) ListDirectories(c *fiber.Ctx) error {
 		Token:    req.GitToken,
 	})
 	if err != nil {
+		if h.cfg.IsDevelopment() {
+			println("Failed to clone repository:", err.Error())
+		}
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Failed to clone repository",
+			"error": "Failed to clone repository: " + err.Error(),
 		})
 	}
 	defer os.RemoveAll(repoPath)
@@ -714,9 +754,16 @@ func (h *ProjectHandler) ListDirectories(c *fiber.Ctx) error {
 	// List subdirectories
 	directories, err := h.listSubdirectories(repoPath)
 	if err != nil {
+		if h.cfg.IsDevelopment() {
+			println("Failed to list directories:", err.Error())
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to list directories",
+			"error": "Failed to list directories: " + err.Error(),
 		})
+	}
+
+	if h.cfg.IsDevelopment() {
+		println("Found", len(directories), "directories with package.json:", directories)
 	}
 
 	return c.JSON(fiber.Map{
@@ -732,6 +779,11 @@ func (h *ProjectHandler) listSubdirectories(rootPath string) ([]string, error) {
 		return nil, err
 	}
 
+	if h.cfg.IsDevelopment() {
+		println("Scanning directory:", rootPath)
+		println("Total entries found:", len(entries))
+	}
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			// Skip hidden directories and common non-app directories
@@ -744,6 +796,9 @@ func (h *ProjectHandler) listSubdirectories(rootPath string) ([]string, error) {
 			packageJsonPath := filepath.Join(rootPath, name, "package.json")
 			if _, err := os.Stat(packageJsonPath); err == nil {
 				directories = append(directories, name)
+				if h.cfg.IsDevelopment() {
+					println("Found app directory:", name)
+				}
 			}
 		}
 	}

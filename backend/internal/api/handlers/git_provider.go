@@ -296,6 +296,28 @@ func (h *GitProviderHandler) listGitHubRepos(c *fiber.Ctx, provider *models.GitP
 		h.cfg.OAuthCallbackURL,
 	)
 
+	// First, validate the token by getting user info
+	user, err := githubService.GetUser(provider.Token)
+	if err != nil {
+		println("Error validating GitHub token:", err.Error())
+
+		// Token might be expired or invalid
+		// Mark provider as disconnected
+		provider.Connected = false
+		h.db.Save(provider)
+
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "GitHub token is invalid or expired. Please reconnect your account.",
+			"details": err.Error(),
+		})
+	}
+
+	// Update username if it changed
+	if user.Login != "" && user.Login != provider.Username {
+		provider.Username = user.Login
+		h.db.Save(provider)
+	}
+
 	repos, err := githubService.ListRepositories(provider.Token)
 	if err != nil {
 		println("Error listing GitHub repositories:", err.Error())
@@ -317,11 +339,33 @@ func (h *GitProviderHandler) listGiteaRepos(c *fiber.Ctx, provider *models.GitPr
 		h.cfg.OAuthCallbackURL,
 	)
 
+	// First, validate the token by getting user info
+	user, err := giteaService.GetUser(provider.Token)
+	if err != nil {
+		println("Error validating Gitea token:", err.Error())
+		println("Provider URL:", provider.URL)
+		println("Provider Username:", provider.Username)
+
+		// Token might be expired or invalid
+		// Mark provider as disconnected
+		provider.Connected = false
+		h.db.Save(provider)
+
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "Gitea token is invalid or expired. Please reconnect your account.",
+			"details": err.Error(),
+		})
+	}
+
+	// Update username if it changed
+	if user.Username != "" && user.Username != provider.Username {
+		provider.Username = user.Username
+		h.db.Save(provider)
+	}
+
 	repos, err := giteaService.ListRepositories(provider.Token)
 	if err != nil {
 		println("Error listing Gitea repositories:", err.Error())
-		println("Provider URL:", provider.URL)
-		println("Provider Token (first 10 chars):", provider.Token[:min(10, len(provider.Token))])
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to list repositories: " + err.Error(),
 		})
