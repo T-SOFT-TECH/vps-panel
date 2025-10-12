@@ -35,121 +35,206 @@
 	<title>Login - VPS Panel</title>
 </svelte:head>
 
-<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-300" style="background-color: rgb(var(--bg-primary));">
+<div class="min-h-screen relative overflow-hidden" style="background-color: rgb(var(--bg-primary));">
+	<!-- Animated Background -->
+	<div class="absolute inset-0 mesh-gradient"></div>
+	<div class="absolute inset-0 dot-pattern opacity-30"></div>
+
+	<!-- Floating Orbs -->
+	<div class="absolute top-20 left-10 w-72 h-72 bg-primary-800 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+	<div class="absolute top-40 right-10 w-72 h-72 bg-primary-600 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+	<div class="absolute -bottom-8 left-1/2 w-72 h-72 bg-primary-700 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+
 	<!-- Theme Toggle - Top Right -->
 	<div class="absolute top-6 right-6 z-20">
 		<ThemeToggle />
 	</div>
 
-	<!-- Login Card -->
-	<div class="w-full max-w-md space-y-8">
-		<!-- Logo & Title -->
-		<div class="text-center">
-			<img
-				src="/img/My-logo.webp"
-				alt="TSOFT Technologies"
-				class="mx-auto h-20 mb-6"
-			/>
-			<h1 class="text-3xl font-bold mb-2" style="color: rgb(var(--text-primary));">
-				Welcome Back
-			</h1>
-			<p class="text-base" style="color: rgb(var(--text-secondary));">
-				Sign in to your VPS Panel
-			</p>
-		</div>
-
-		<!-- Login Form Card -->
-		<div class="elevated-card p-8">
-			<form onsubmit={handleLogin} class="space-y-6">
-				{#if error}
-					<Alert variant="error" dismissible ondismiss={() => error = ''}>
-						{error}
-					</Alert>
-				{/if}
-
-				<div>
-					<label
-						for="email"
-						class="block text-sm font-medium mb-2"
-						style="color: rgb(var(--text-primary));"
-					>
-						Email Address
-					</label>
-					<Input
-						id="email"
-						type="email"
-						bind:value={email}
-						placeholder="you@example.com"
-						required
-						disabled={loading}
-						class="modern-input"
+	<!-- Login Container -->
+	<div class="relative z-10 flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+		<div class="w-full max-w-md space-y-8">
+			<!-- Logo & Title -->
+			<div class="text-center scale-up">
+				<div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-brand shadow-xl glow-green mb-6 float">
+					<img
+						src="/img/My-Icon.webp"
+						alt="TSOFT Technologies"
+						class="w-16 h-16 rounded-xl"
 					/>
 				</div>
-
-				<div>
-					<label
-						for="password"
-						class="block text-sm font-medium mb-2"
-						style="color: rgb(var(--text-primary));"
-					>
-						Password
-					</label>
-					<Input
-						id="password"
-						type="password"
-						bind:value={password}
-						placeholder="Enter your password"
-						required
-						disabled={loading}
-						class="modern-input"
-					/>
-				</div>
-
-				<div class="flex items-center justify-between text-sm">
-					<label class="flex items-center cursor-pointer">
-						<input
-							type="checkbox"
-							class="w-4 h-4 rounded border-2 text-primary-800 focus:ring-primary-600 focus:ring-offset-2 transition-all"
-							style="border-color: rgb(var(--border-primary));"
-						/>
-						<span class="ml-2" style="color: rgb(var(--text-secondary));">
-							Remember me
-						</span>
-					</label>
-					<a href="/forgot-password" class="font-medium text-primary-800 hover:text-primary-700 transition-colors">
-						Forgot password?
-					</a>
-				</div>
-
-				<Button type="submit" {loading} disabled={loading} class="btn-primary w-full">
-					{#if loading}
-						<span class="spinner mr-2"></span>
-						Signing in...
-					{:else}
-						Sign in
-					{/if}
-				</Button>
-			</form>
-
-			<!-- Register Link -->
-			<div class="mt-6 pt-6 border-t" style="border-color: rgb(var(--border-primary));">
-				<p class="text-center text-sm" style="color: rgb(var(--text-secondary));">
-					Don't have an account?
-					<a href="/register" class="font-semibold text-primary-800 hover:text-primary-700 transition-colors ml-1">
-						Create one now →
-					</a>
+				<h1 class="text-4xl font-bold mb-2 bg-gradient-to-r from-primary-600 to-primary-800 bg-clip-text text-transparent">
+					Welcome Back
+				</h1>
+				<p class="text-lg" style="color: rgb(var(--text-secondary));">
+					Sign in to continue to VPS Panel
 				</p>
 			</div>
-		</div>
 
-		<!-- Security Badge -->
-		<div class="text-center">
-			<p class="text-xs flex items-center justify-center gap-2" style="color: rgb(var(--text-tertiary));">
-				<svg class="w-4 h-4 text-primary-800" fill="currentColor" viewBox="0 0 20 20">
-					<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
-				</svg>
-				Secured with enterprise-grade encryption
-			</p>
+			<!-- Login Form Card -->
+			<div class="glass-pro rounded-2xl p-8 shadow-2xl fade-in" style="border-radius: 1.5rem;">
+				<form onsubmit={handleLogin} class="space-y-6">
+					{#if error}
+						<div class="slide-in-up">
+							<Alert variant="error" dismissible ondismiss={() => error = ''}>
+								{error}
+							</Alert>
+						</div>
+					{/if}
+
+					<div class="space-y-5">
+						<div class="slide-in-left stagger-1">
+							<label
+								for="email"
+								class="block text-sm font-semibold mb-2"
+								style="color: rgb(var(--text-primary));"
+							>
+								Email Address
+							</label>
+							<div class="relative group">
+								<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+									<svg class="w-5 h-5 group-focus-within:text-primary-600 transition-colors" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+									</svg>
+								</div>
+								<Input
+									id="email"
+									type="email"
+									bind:value={email}
+									placeholder="you@example.com"
+									required
+									disabled={loading}
+									class="modern-input pl-12 hover-lift"
+								/>
+							</div>
+						</div>
+
+						<div class="slide-in-left stagger-2">
+							<label
+								for="password"
+								class="block text-sm font-semibold mb-2"
+								style="color: rgb(var(--text-primary));"
+							>
+								Password
+							</label>
+							<div class="relative group">
+								<div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+									<svg class="w-5 h-5 group-focus-within:text-primary-600 transition-colors" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+									</svg>
+								</div>
+								<Input
+									id="password"
+									type="password"
+									bind:value={password}
+									placeholder="Enter your password"
+									required
+									disabled={loading}
+									class="modern-input pl-12 hover-lift"
+								/>
+							</div>
+						</div>
+					</div>
+
+					<div class="flex items-center justify-between text-sm slide-in-left stagger-3">
+						<label class="flex items-center cursor-pointer group">
+							<input
+								type="checkbox"
+								class="w-4 h-4 rounded border-2 text-primary-800 focus:ring-primary-600 focus:ring-offset-2 transition-all cursor-pointer"
+								style="border-color: rgb(var(--border-primary));"
+							/>
+							<span class="ml-2 group-hover:text-primary-700 transition-colors" style="color: rgb(var(--text-secondary));">
+								Remember me
+							</span>
+						</label>
+						<a href="/forgot-password" class="font-semibold text-primary-800 hover:text-primary-600 transition-colors hover:underline">
+							Forgot password?
+						</a>
+					</div>
+
+					<div class="slide-in-up stagger-4">
+						<Button
+							type="submit"
+							{loading}
+							disabled={loading}
+							class="btn-primary w-full text-base py-4 glow-green-hover"
+						>
+							{#if loading}
+								<span class="spinner mr-2"></span>
+								Signing in...
+							{:else}
+								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+								</svg>
+								Sign in to Dashboard
+							{/if}
+						</Button>
+					</div>
+				</form>
+
+				<!-- Divider -->
+				<div class="relative my-8">
+					<div class="absolute inset-0 flex items-center">
+						<div class="w-full border-t" style="border-color: rgb(var(--border-primary));"></div>
+					</div>
+					<div class="relative flex justify-center text-sm">
+						<span class="px-4 text-sm font-medium" style="background-color: rgb(var(--bg-secondary) / 0.7); color: rgb(var(--text-tertiary));">
+							New to VPS Panel?
+						</span>
+					</div>
+				</div>
+
+				<!-- Register Link -->
+				<div class="text-center fade-in">
+					<a
+						href="/register"
+						class="inline-flex items-center justify-center px-6 py-3 rounded-xl font-semibold text-sm transition-all duration-200 hover:scale-105 hover-lift gradient-border"
+						style="color: rgb(var(--text-primary));"
+					>
+						<svg class="w-5 h-5 mr-2 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+						</svg>
+						Create New Account
+					</a>
+				</div>
+			</div>
+
+			<!-- Security Badge -->
+			<div class="text-center fade-in">
+				<div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card">
+					<svg class="w-5 h-5 text-primary-600" fill="currentColor" viewBox="0 0 20 20">
+						<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+					</svg>
+					<span class="text-sm font-medium" style="color: rgb(var(--text-secondary));">
+						Secured with enterprise-grade encryption
+					</span>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>
+
+<style>
+	@keyframes blob {
+		0%, 100% {
+			transform: translate(0, 0) scale(1);
+		}
+		33% {
+			transform: translate(30px, -50px) scale(1.1);
+		}
+		66% {
+			transform: translate(-20px, 20px) scale(0.9);
+		}
+	}
+
+	.animate-blob {
+		animation: blob 7s infinite;
+	}
+
+	.animation-delay-2000 {
+		animation-delay: 2s;
+	}
+
+	.animation-delay-4000 {
+		animation-delay: 4s;
+	}
+</style>

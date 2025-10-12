@@ -20,10 +20,10 @@
 	let visible = $state(true);
 
 	const variants = {
-		success: 'bg-green-950/50 text-green-400 border-green-800',
-		warning: 'bg-yellow-950/50 text-yellow-400 border-yellow-800',
-		error: 'bg-red-950/50 text-red-400 border-red-800',
-		info: 'bg-green-950/50 text-green-400 border-green-800'
+		success: 'bg-primary-950/30 text-primary-400 border-primary-800/50',
+		warning: 'bg-yellow-950/30 text-yellow-400 border-yellow-800/50',
+		error: 'bg-red-950/30 text-red-400 border-red-800/50',
+		info: 'bg-blue-950/30 text-blue-400 border-blue-800/50'
 	};
 
 	const icons = {
@@ -40,18 +40,22 @@
 </script>
 
 {#if visible}
-	<div class="rounded-lg border p-4 {variants[variant]} {className}" role="alert">
-		<div class="flex items-start">
-			<svg class="w-5 h-5 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={icons[variant]} />
-			</svg>
-			<div class="flex-1">
+	<div class="rounded-xl border p-4 backdrop-blur-sm shadow-lg slide-in-up {variants[variant]} {className}" role="alert">
+		<div class="flex items-start gap-3">
+			<div class="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center {variant === 'success' ? 'bg-primary-800/30' : variant === 'warning' ? 'bg-yellow-800/30' : variant === 'error' ? 'bg-red-800/30' : 'bg-blue-800/30'}">
+				<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={icons[variant]} />
+				</svg>
+			</div>
+			<div class="flex-1 pt-1.5">
 				{@render children()}
 			</div>
 			{#if dismissible}
 				<button
 					onclick={handleDismiss}
-					class="ml-3 inline-flex flex-shrink-0 focus:outline-none"
+					class="flex-shrink-0 p-1.5 rounded-lg transition-all duration-200 hover:scale-110 hover:rotate-90"
+					style="color: rgb(var(--text-tertiary)); background-color: rgb(var(--bg-tertiary) / 0.5);"
+					aria-label="Dismiss alert"
 				>
 					<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />

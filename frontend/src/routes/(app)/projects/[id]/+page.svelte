@@ -10,6 +10,7 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import Alert from '$lib/components/Alert.svelte';
 	import DomainManager from '$lib/components/DomainManager.svelte';
+	import WebhookConfig from '$lib/components/WebhookConfig.svelte';
 	import { formatRelativeTime, formatDuration } from '$lib/utils/format';
 	import type { Project, Deployment, Environment } from '$lib/types';
 
@@ -179,62 +180,96 @@
 </svelte:head>
 
 {#if loading}
-	<div class="text-center py-12">
-		<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-800 mx-auto"></div>
-		<p class="mt-4" style="color: rgb(var(--text-secondary));">Loading project...</p>
-	</div>
-{:else if !project}
-	<Card>
-		<div class="text-center py-12">
-			<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Project not found</h3>
-			<p class="mt-1 text-sm" style="color: rgb(var(--text-secondary));">The project you're looking for doesn't exist.</p>
-			<div class="mt-6">
-				<Button onclick={() => window.location.href = '/projects'}>
-					Back to Projects
-				</Button>
+	<div class="text-center py-16">
+		<div class="relative w-16 h-16 mx-auto mb-6">
+			<div class="absolute inset-0 rounded-full border-4 border-primary-200"></div>
+			<div class="absolute inset-0 rounded-full border-4 border-primary-800 border-t-transparent animate-spin"></div>
+			<div class="absolute inset-0 flex items-center justify-center">
+				<div class="w-8 h-8 bg-gradient-brand rounded-full pulse"></div>
 			</div>
 		</div>
-	</Card>
-{:else}
-	<div class="space-y-6">
-		<!-- Header -->
-		<div>
-			<a href="/projects" class="flex items-center mb-4 text-sm" style="color: rgb(var(--text-brand));">
-				<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+		<p class="text-lg font-medium" style="color: rgb(var(--text-secondary));">Loading project...</p>
+	</div>
+{:else if !project}
+	<div class="modern-card p-12">
+		<div class="text-center">
+			<div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500/10 to-red-600/10 mb-6">
+				<svg class="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+				</svg>
+			</div>
+			<h3 class="text-2xl font-bold mb-2" style="color: rgb(var(--text-primary));">Project not found</h3>
+			<p class="text-base mb-8" style="color: rgb(var(--text-secondary));">The project you're looking for doesn't exist.</p>
+			<Button onclick={() => window.location.href = '/projects'} class="btn-primary glow-green-hover">
+				<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 				</svg>
 				Back to Projects
-			</a>
+			</Button>
+		</div>
+	</div>
+{:else}
+	<div class="space-y-6 pb-8">
+		<!-- Header with Gradient Background -->
+		<div class="relative overflow-hidden rounded-2xl slide-in-down">
+			<div class="absolute inset-0 mesh-gradient opacity-50"></div>
+			<div class="relative glass-pro p-6 border-0">
+				<a href="/projects" class="inline-flex items-center text-sm font-medium hover:scale-105 transition-transform mb-4 group" style="color: rgb(var(--text-brand));">
+					<svg class="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+					</svg>
+					Back to Projects
+				</a>
 
-			<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-				<div>
-					<div class="flex items-center gap-3">
-						<h1 class="text-3xl font-bold" style="color: rgb(var(--text-primary));">{project.name}</h1>
-						<Badge variant={getStatusVariant(project.status)}>
-							{project.status}
-						</Badge>
+				<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+					<div class="flex-1">
+						<div class="flex items-center gap-3 mb-2">
+							<div class="w-14 h-14 rounded-xl bg-gradient-brand flex items-center justify-center shadow-xl glow-green float">
+								<svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+								</svg>
+							</div>
+							<div>
+								<h1 class="text-4xl font-bold bg-gradient-to-r from-primary-700 to-primary-900 bg-clip-text text-transparent">
+									{project.name}
+								</h1>
+								<div class="flex items-center gap-2 mt-1">
+									<Badge variant={getStatusVariant(project.status)} class="text-xs">
+										{project.status}
+									</Badge>
+									{#if project.framework}
+										<Badge variant="info" class="text-xs capitalize">
+											{project.framework}
+										</Badge>
+									{/if}
+								</div>
+							</div>
+						</div>
+						{#if project.description}
+							<p class="text-base" style="color: rgb(var(--text-secondary));">{project.description}</p>
+						{/if}
 					</div>
-					{#if project.description}
-						<p class="mt-1" style="color: rgb(var(--text-secondary));">{project.description}</p>
-					{/if}
-				</div>
 
-				<div class="flex gap-2">
-					<Button onclick={handleDeploy} loading={deploying} disabled={deploying}>
-						<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-						</svg>
-						Deploy
-					</Button>
-					<Button variant="secondary" onclick={() => goto(`/projects/${projectId}/edit`)}>
-						<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-						</svg>
-						Edit
-					</Button>
-					<Button variant="danger" onclick={() => deleteModalOpen = true}>
-						Delete
-					</Button>
+					<div class="flex flex-wrap gap-2">
+						<Button onclick={handleDeploy} loading={deploying} disabled={deploying} class="btn-primary glow-green-hover hover:scale-105 transition-transform">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+							</svg>
+							Deploy
+						</Button>
+						<Button variant="secondary" onclick={() => goto(`/projects/${projectId}/edit`)} class="hover:scale-105 transition-transform">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+							</svg>
+							Edit
+						</Button>
+						<Button variant="danger" onclick={() => deleteModalOpen = true} class="hover:scale-105 transition-transform">
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+							</svg>
+							Delete
+						</Button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -247,23 +282,35 @@
 
 		<!-- Project Details -->
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-			<div class="lg:col-span-2 space-y-6">
+			<div class="lg:col-span-2 space-y-6 slide-in-left">
 				<!-- Deployments -->
-				<Card>
-					<h2 class="text-lg font-semibold mb-4" style="color: rgb(var(--text-primary));">Recent Deployments</h2>
+				<div class="relative overflow-hidden rounded-2xl">
+					<div class="absolute inset-0 bg-gradient-to-br from-primary-600/5 to-primary-800/5"></div>
+					<div class="relative modern-card p-6 border-0">
+						<div class="flex items-center gap-3 mb-6">
+							<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+								<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+								</svg>
+							</div>
+							<h2 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Recent Deployments</h2>
+						</div>
 
 					{#if deployments.length === 0}
-						<div class="text-center py-8">
-							<svg class="mx-auto h-12 w-12" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-							</svg>
-							<h3 class="mt-2 text-sm font-medium" style="color: rgb(var(--text-primary));">No deployments yet</h3>
-							<p class="mt-1 text-sm" style="color: rgb(var(--text-secondary));">Get started by deploying your project.</p>
-							<div class="mt-6">
-								<Button onclick={handleDeploy} loading={deploying}>
-									Deploy Now
-								</Button>
+						<div class="text-center py-12">
+							<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-800/10 to-primary-600/10 mb-4">
+								<svg class="w-8 h-8 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+								</svg>
 							</div>
+							<h3 class="text-lg font-bold mb-2" style="color: rgb(var(--text-primary));">No deployments yet</h3>
+							<p class="text-sm mb-6" style="color: rgb(var(--text-secondary));">Get started by deploying your project.</p>
+							<Button onclick={handleDeploy} loading={deploying} class="btn-primary glow-green-hover">
+								<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+								</svg>
+								Deploy Now
+							</Button>
 						</div>
 					{:else}
 						<div class="space-y-3">
@@ -308,14 +355,22 @@
 							{/each}
 						</div>
 					{/if}
-				</Card>
+					</div>
+				</div>
 			</div>
 
 			<!-- Sidebar -->
-			<div class="space-y-6">
+			<div class="space-y-6 slide-in-right">
 				<!-- Project Info -->
-				<Card>
-					<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Project Information</h3>
+				<div class="modern-card p-5 hover-lift transition-all">
+					<div class="flex items-center gap-2 mb-4">
+						<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+							<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+							</svg>
+						</div>
+						<h3 class="text-base font-bold" style="color: rgb(var(--text-primary));">Project Information</h3>
+					</div>
 					<dl class="space-y-3 text-sm">
 						<div>
 							<dt style="color: rgb(var(--text-secondary));">Framework</dt>
@@ -342,7 +397,7 @@
 							</div>
 						{/if}
 					</dl>
-				</Card>
+				</div>
 
 				<!-- Domain Management -->
 				<DomainManager
@@ -416,10 +471,17 @@
 				{/if}
 
 				<!-- Environment Variables -->
-				<Card>
-					<div class="flex items-center justify-between mb-3">
-						<h3 class="text-sm font-semibold" style="color: rgb(var(--text-primary));">Environment Variables</h3>
-						<Button variant="ghost" size="sm" onclick={openAddEnvModal}>
+				<div class="modern-card p-5 hover-lift transition-all">
+					<div class="flex items-center justify-between mb-4">
+						<div class="flex items-center gap-2">
+							<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+								<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+								</svg>
+							</div>
+							<h3 class="text-base font-bold" style="color: rgb(var(--text-primary));">Environment Variables</h3>
+						</div>
+						<Button variant="ghost" size="sm" onclick={openAddEnvModal} class="hover:scale-110 transition-transform">
 							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
 							</svg>
@@ -482,21 +544,34 @@
 							{/each}
 						</div>
 					{/if}
-				</Card>
+				</div>
+
+				<!-- Webhook Auto-Deploy Configuration -->
+				<WebhookConfig {projectId} />
 
 				<!-- Repository -->
-				<Card>
-					<h3 class="text-sm font-semibold mb-3" style="color: rgb(var(--text-primary));">Repository</h3>
+				<div class="modern-card p-5 hover-lift transition-all">
+					<div class="flex items-center gap-2 mb-3">
+						<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+							<svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+								<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+							</svg>
+						</div>
+						<h3 class="text-base font-bold" style="color: rgb(var(--text-primary));">Repository</h3>
+					</div>
 					<a
 						href={project.git_url}
 						target="_blank"
 						rel="noopener noreferrer"
-						class="text-sm break-all"
+						class="text-sm break-all font-medium hover:text-primary-700 transition-colors inline-flex items-center gap-1 group"
 						style="color: rgb(var(--text-brand));"
 					>
-						{project.git_url}
+						<span>{project.git_url}</span>
+						<svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+						</svg>
 					</a>
-				</Card>
+				</div>
 			</div>
 		</div>
 	</div>

@@ -58,8 +58,10 @@ type Project struct {
 	BackendPort  int `gorm:"default:8090" json:"backend_port"`
 
 	// Deployment settings
-	AutoDeploy     bool   `gorm:"default:true" json:"auto_deploy"`
-	DeploymentPath string `json:"deployment_path"` // /home/user/apps/project-name
+	AutoDeploy     bool   `gorm:"default:false" json:"auto_deploy"` // Webhook auto-deploy
+	DeploymentPath string `json:"deployment_path"`                  // /home/user/apps/project-name
+	WebhookSecret  string `json:"webhook_secret,omitempty"`         // Secret for webhook verification
+	AutoDeployBranch string `json:"auto_deploy_branch,omitempty"`   // Branch to auto-deploy (defaults to GitBranch)
 
 	// Status
 	Status       string `gorm:"default:pending" json:"status"` // pending, deploying, active, failed

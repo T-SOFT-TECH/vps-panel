@@ -396,36 +396,70 @@
 	<title>New Project - VPS Panel</title>
 </svelte:head>
 
-<div class="max-w-3xl mx-auto">
-	<div class="mb-6" in:fly={{ y: -20, duration: 400, delay: 0 }}>
-		<a href="/projects" class="flex items-center text-sm" style="color: rgb(var(--text-brand));">
-			<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-			</svg>
-			Back to Projects
-		</a>
-		<h1 class="text-3xl font-bold mt-4" style="color: rgb(var(--text-primary));">Create New Project</h1>
-		<p class="mt-1 text-sm" style="color: rgb(var(--text-secondary));">Deploy a new application to your VPS</p>
+<div class="max-w-3xl mx-auto space-y-6 pb-8">
+	<!-- Header with Gradient Background -->
+	<div class="relative overflow-hidden rounded-2xl slide-in-down">
+		<div class="absolute inset-0 mesh-gradient opacity-50"></div>
+		<div class="relative glass-pro p-6 border-0">
+			<a href="/projects" class="inline-flex items-center text-sm font-medium hover:scale-105 transition-transform mb-4 group" style="color: rgb(var(--text-brand));">
+				<svg class="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+				</svg>
+				Back to Projects
+			</a>
+			<div class="flex items-center gap-4">
+				<div class="w-16 h-16 rounded-2xl bg-gradient-brand flex items-center justify-center shadow-xl glow-green float">
+					<svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+					</svg>
+				</div>
+				<div>
+					<h1 class="text-4xl font-bold bg-gradient-to-r from-primary-700 to-primary-900 bg-clip-text text-transparent mb-1">
+						Create New Project
+					</h1>
+					<p class="text-base" style="color: rgb(var(--text-secondary));">
+						Deploy a new application to your VPS in minutes
+					</p>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<!-- Git Repository Selector -->
 	{#if providers.length > 0 && showRepoSelector}
-		<div in:fly={{ y: 20, duration: 400, delay: 100 }} class="mb-6">
-			<Card>
-				<div class="flex items-center justify-between mb-4">
-					<div>
-						<h2 class="text-lg font-semibold" style="color: rgb(var(--text-primary));">Import Git Repository</h2>
-						<p class="text-sm mt-1" style="color: rgb(var(--text-secondary));">Select a repository from your connected Git providers</p>
+		<div class="slide-in-up stagger-1">
+			<div class="relative overflow-hidden rounded-2xl">
+				<div class="absolute inset-0 bg-gradient-to-br from-primary-600/10 to-primary-800/10 rounded-2xl"></div>
+				<div class="relative modern-card p-6 border-0">
+					<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+						<div class="flex items-center gap-3">
+							<div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+								<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+									<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+								</svg>
+							</div>
+							<div>
+								<h2 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Import Git Repository</h2>
+								<p class="text-sm mt-1" style="color: rgb(var(--text-secondary));">Select from your connected providers</p>
+							</div>
+						</div>
+						<Button variant="ghost" size="sm" onclick={() => showRepoSelector = false} class="hover:scale-105 transition-transform">
+							<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+							</svg>
+							Enter manually
+						</Button>
 					</div>
-					<Button variant="ghost" size="sm" onclick={() => showRepoSelector = false}>
-						Or enter manually →
-					</Button>
-				</div>
 
 				<!-- Provider Selector -->
 				{#if providers.length > 1}
 					<div class="mb-4">
-						<label class="block text-sm font-medium mb-2" style="color: rgb(var(--text-primary));">Git Provider</label>
+						<label class="block text-sm font-semibold mb-2" style="color: rgb(var(--text-primary));">
+							<svg class="w-4 h-4 inline mr-1 -mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+							</svg>
+							Git Provider
+						</label>
 						<select
 							value={selectedProvider?.id}
 							onchange={(e) => handleProviderChange(Number(e.currentTarget.value))}
@@ -441,55 +475,68 @@
 				{/if}
 
 				<!-- Search -->
-				<div class="mb-4">
-					<input
-						type="text"
-						placeholder="Search repositories..."
-						bind:value={repoSearchQuery}
-						class="modern-input block w-full"
-					/>
+				<div class="mb-4 relative group">
+					<div class="absolute inset-0 bg-gradient-brand rounded-xl opacity-0 group-focus-within:opacity-10 blur-xl transition-opacity"></div>
+					<div class="relative">
+						<svg class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors group-focus-within:text-primary-600" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+						</svg>
+						<input
+							type="text"
+							placeholder="Search repositories by name..."
+							bind:value={repoSearchQuery}
+							class="modern-input block w-full pl-12"
+						/>
+					</div>
 				</div>
 
 				<!-- Repository List -->
 				{#if loadingRepos}
 					<div class="text-center py-12">
-						<div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-800 mx-auto"></div>
-						<p class="mt-4" style="color: rgb(var(--text-secondary));">Loading repositories...</p>
+						<div class="relative w-12 h-12 mx-auto">
+							<div class="absolute inset-0 rounded-full border-4 border-primary-200"></div>
+							<div class="absolute inset-0 rounded-full border-4 border-primary-800 border-t-transparent animate-spin"></div>
+						</div>
+						<p class="mt-4 font-medium" style="color: rgb(var(--text-secondary));">Loading repositories...</p>
 					</div>
 				{:else if filteredRepos.length === 0}
 					<div class="text-center py-12">
-						<svg class="mx-auto h-12 w-12" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-						</svg>
-						<p class="mt-2 text-sm" style="color: rgb(var(--text-secondary));">
-							{repoSearchQuery ? 'No repositories found' : 'No repositories'}
+						<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-800/10 to-primary-600/10 mb-4">
+							<svg class="w-8 h-8 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+							</svg>
+						</div>
+						<p class="text-sm font-medium" style="color: rgb(var(--text-secondary));">
+							{repoSearchQuery ? 'No repositories found' : 'No repositories available'}
 						</p>
 					</div>
 				{:else}
-					<div class="space-y-2 max-h-96 overflow-y-auto">
-						{#each filteredRepos as repo}
+					<div class="space-y-2 max-h-96 overflow-y-auto pr-2">
+						{#each filteredRepos as repo, i}
 							<button
 								type="button"
 								onclick={() => selectRepo(repo)}
-								class="w-full text-left p-4 rounded-lg transition-colors"
-								style="border: 1px solid rgb(var(--border-primary)); background-color: transparent;"
-								onmouseenter={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--text-brand))'; e.currentTarget.style.backgroundColor = 'rgb(var(--bg-secondary))'; }}
-								onmouseleave={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--border-primary))'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+								class="w-full text-left p-4 rounded-xl transition-all duration-200 group hover-lift fade-in"
+								style="border: 1px solid rgb(var(--border-primary)); background-color: rgb(var(--bg-secondary)); animation-delay: {i * 0.05}s;"
+								onmouseenter={(e) => { e.currentTarget.style.borderColor = 'rgb(10, 101, 34)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+								onmouseleave={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--border-primary))'; e.currentTarget.style.transform = 'translateY(0)'; }}
 							>
-								<div class="flex items-start justify-between">
-									<div class="flex-1">
-										<div class="flex items-center space-x-2">
-											<svg class="w-5 h-5" style="color: rgb(var(--text-tertiary));" fill="currentColor" viewBox="0 0 24 24">
-												<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-											</svg>
-											<span class="font-medium" style="color: rgb(var(--text-primary));">{repo.name}</span>
+								<div class="flex items-start justify-between gap-3">
+									<div class="flex-1 min-w-0">
+										<div class="flex items-center gap-2 mb-1">
+											<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform">
+												<svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
+													<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+												</svg>
+											</div>
+											<span class="font-semibold truncate group-hover:text-primary-700 transition-colors" style="color: rgb(var(--text-primary));">{repo.name}</span>
 											{#if repo.private}
 												<Badge variant="warning">Private</Badge>
 											{/if}
 										</div>
-										<p class="text-xs mt-1" style="color: rgb(var(--text-secondary));">{repo.full_name}</p>
+										<p class="text-xs truncate" style="color: rgb(var(--text-secondary));">{repo.full_name}</p>
 									</div>
-									<svg class="w-5 h-5" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg class="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 									</svg>
 								</div>
@@ -497,37 +544,50 @@
 						{/each}
 					</div>
 				{/if}
-			</Card>
+				</div>
+			</div>
 		</div>
 	{/if}
 
 	<!-- Project Configuration Form -->
 	{#if !showRepoSelector || providers.length === 0}
-		<div in:fly={{ y: 20, duration: 400, delay: 100 }}>
+		<div class="slide-in-up stagger-2">
 			<!-- Show selected repository info if coming from selector -->
 			{#if selectedRepo}
 				<div class="mb-4">
-					<Card>
+					<div class="modern-card p-4 border-l-4 border-primary-700 hover-lift">
 						<div class="flex items-center justify-between">
-							<div class="flex items-center space-x-3">
-								<svg class="w-8 h-8 text-primary-800" fill="currentColor" viewBox="0 0 24 24">
-									<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-								</svg>
+							<div class="flex items-center gap-3">
+								<div class="w-10 h-10 rounded-lg bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center shadow-lg">
+									<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+										<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+									</svg>
+								</div>
 								<div>
-									<p class="font-medium" style="color: rgb(var(--text-primary));">{selectedRepo.full_name}</p>
-									<p class="text-xs" style="color: rgb(var(--text-secondary));">{selectedRepo.default_branch} branch</p>
+									<p class="font-semibold flex items-center gap-2" style="color: rgb(var(--text-primary));">
+										{selectedRepo.full_name}
+										<Badge variant="success">Selected</Badge>
+									</p>
+									<p class="text-xs flex items-center gap-1 mt-1" style="color: rgb(var(--text-secondary));">
+										<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+										</svg>
+										{selectedRepo.default_branch} branch
+									</p>
 								</div>
 							</div>
-							<Button variant="ghost" size="sm" onclick={clearRepoSelection}>
+							<Button variant="ghost" size="sm" onclick={clearRepoSelection} class="hover:scale-105 transition-transform">
 								Change
 							</Button>
 						</div>
-					</Card>
+					</div>
 				</div>
 			{/if}
 
-			<Card>
-			<form onsubmit={handleSubmit} class="space-y-6">
+			<div class="relative overflow-hidden rounded-2xl">
+				<div class="absolute inset-0 bg-gradient-to-br from-primary-600/5 to-primary-800/5"></div>
+				<div class="relative modern-card p-6 border-0">
+			<form onsubmit={handleSubmit} class="space-y-8">
 				{#if error}
 					<Alert variant="error" dismissible ondismiss={() => error = ''}>
 						{error}
@@ -542,7 +602,14 @@
 
 			<!-- Basic Info -->
 			<div class="space-y-4">
-				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Basic Information</h3>
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Basic Information</h3>
+				</div>
 
 				<Input
 					label="Project Name"
@@ -553,7 +620,7 @@
 				/>
 
 				<div>
-					<label for="description" class="block text-sm font-medium mb-1" style="color: rgb(var(--text-primary));">
+					<label for="description" class="block text-sm font-semibold mb-2" style="color: rgb(var(--text-primary));">
 						Description
 					</label>
 					<textarea
@@ -569,15 +636,23 @@
 
 			<!-- Git Configuration -->
 			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
-				<div class="flex justify-between items-center">
-					<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Git Repository</h3>
-					<div class="flex space-x-2">
+				<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+					<div class="flex items-center gap-3">
+						<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shadow-lg">
+							<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+							</svg>
+						</div>
+						<h3 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Git Repository</h3>
+					</div>
+					<div class="flex gap-2">
 						<Button
 							variant="secondary"
 							size="sm"
 							onclick={loadBranches}
 							loading={loadingBranches}
 							disabled={loadingBranches || !gitUrl}
+							class="hover:scale-105 transition-transform"
 						>
 							{loadingBranches ? 'Loading...' : 'Load Branches'}
 						</Button>
@@ -587,6 +662,7 @@
 							onclick={detectFramework}
 							loading={detecting}
 							disabled={detecting || !gitUrl}
+							class="hover:scale-105 transition-transform"
 						>
 							{detecting ? 'Detecting...' : 'Auto-Detect'}
 						</Button>
@@ -617,30 +693,37 @@
 				{/if}
 
 				{#if showDirectorySelector && directories.length > 0}
-					<div class="space-y-3">
-						<label class="block text-sm font-medium" style="color: rgb(var(--text-primary));">
-							Select Directory to Deploy
-						</label>
-						<p class="text-xs -mt-2" style="color: rgb(var(--text-secondary));">
-							Multiple directories detected in this repository. Choose which one to deploy:
+					<div class="space-y-3 p-4 rounded-xl" style="background-color: rgb(var(--bg-secondary)); border: 2px dashed rgb(var(--border-primary));">
+						<div class="flex items-center gap-2 mb-2">
+							<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+								<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+								</svg>
+							</div>
+							<label class="block text-sm font-semibold" style="color: rgb(var(--text-primary));">
+								Select Directory to Deploy
+							</label>
+						</div>
+						<p class="text-xs" style="color: rgb(var(--text-secondary));">
+							Monorepo detected! Choose which directory contains your application:
 						</p>
 						<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-							{#each directories as dir}
+							{#each directories as dir, i}
 								<button
 									type="button"
 									onclick={() => selectDirectory(dir)}
-									class="p-3 rounded-lg transition-colors text-left flex items-center justify-between group"
-									style="border: 1px solid rgb(var(--border-primary));"
-									onmouseenter={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--text-brand))'; e.currentTarget.style.backgroundColor = 'rgb(var(--bg-secondary))'; }}
-									onmouseleave={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--border-primary))'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+									class="p-3 rounded-xl transition-all duration-200 text-left flex items-center justify-between group hover-lift fade-in"
+									style="border: 2px solid rgb(var(--border-primary)); background-color: rgb(var(--bg-primary)); animation-delay: {i * 0.1}s;"
+									onmouseenter={(e) => { e.currentTarget.style.borderColor = 'rgb(10, 101, 34)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+									onmouseleave={(e) => { e.currentTarget.style.borderColor = 'rgb(var(--border-primary))'; e.currentTarget.style.transform = 'translateY(0)'; }}
 								>
-									<div class="flex items-center space-x-2">
-										<svg class="w-5 h-5" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<div class="flex items-center gap-2">
+										<svg class="w-5 h-5 group-hover:text-primary-700 transition-colors" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
 										</svg>
-										<span class="text-sm font-medium" style="color: rgb(var(--text-primary));">{dir}</span>
+										<span class="text-sm font-semibold group-hover:text-primary-700 transition-colors" style="color: rgb(var(--text-primary));">{dir}</span>
 									</div>
-									<svg class="w-5 h-5" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" style="color: rgb(var(--text-tertiary));" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 									</svg>
 								</button>
@@ -649,10 +732,10 @@
 						<button
 							type="button"
 							onclick={() => { showDirectorySelector = false; rootDirectory = ''; }}
-							class="text-xs underline"
+							class="text-xs font-medium underline hover:text-primary-700 transition-colors"
 							style="color: rgb(var(--text-secondary));"
 						>
-							Skip - deploy from root directory
+							Skip - deploy from root directory instead
 						</button>
 					</div>
 				{/if}
@@ -722,7 +805,14 @@
 
 			<!-- Framework & Backend -->
 			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
-				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Framework & Backend</h3>
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg">
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Framework & Backend</h3>
+				</div>
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<Select
@@ -742,22 +832,45 @@
 				</div>
 
 				{#if baasType === 'pocketbase'}
-					<div class="p-4 rounded-lg" style="background-color: rgb(var(--bg-secondary)); border-left: 3px solid rgb(10, 101, 34);">
-						<div class="flex items-start space-x-3">
-							<svg class="w-5 h-5 mt-0.5 flex-shrink-0" style="color: rgb(10, 101, 34);" fill="currentColor" viewBox="0 0 24 24">
-								<path d="M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z"/>
-							</svg>
+					<div class="relative overflow-hidden p-5 rounded-xl fade-in" style="background: linear-gradient(135deg, rgba(10, 101, 34, 0.05) 0%, rgba(10, 101, 34, 0.1) 100%); border: 2px solid rgba(10, 101, 34, 0.3);">
+						<div class="absolute top-0 right-0 w-32 h-32 bg-primary-600 rounded-full blur-3xl opacity-10"></div>
+						<div class="relative flex items-start gap-4">
+							<div class="w-12 h-12 rounded-xl bg-gradient-brand flex items-center justify-center shadow-lg flex-shrink-0 glow-green">
+								<svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+									<path d="M13 9h-2V7h2m0 10h-2v-6h2m-1-9A10 10 0 0 0 2 12a10 10 0 0 0 10 10 10 10 0 0 0 10-10A10 10 0 0 0 12 2z"/>
+								</svg>
+							</div>
 							<div class="flex-1">
-								<p class="text-sm font-medium mb-1" style="color: rgb(var(--text-primary));">PocketBase Backend</p>
-								<p class="text-xs" style="color: rgb(var(--text-secondary));">
-									PocketBase will be automatically deployed alongside your frontend using the <strong>official binary from GitHub</strong>.
+								<p class="text-base font-bold mb-2" style="color: rgb(var(--text-primary));">PocketBase Backend Included</p>
+								<p class="text-sm mb-3" style="color: rgb(var(--text-secondary));">
+									PocketBase will be automatically deployed alongside your frontend using the <strong class="text-primary-700">official binary from GitHub</strong>.
 									Your deployment will include:
 								</p>
-								<ul class="text-xs mt-2 space-y-1 ml-4" style="color: rgb(var(--text-secondary));">
-									<li>• SQLite database with realtime subscriptions</li>
-									<li>• Built-in authentication and file storage</li>
-									<li>• Admin dashboard at <code class="px-1 py-0.5 rounded" style="background-color: rgb(var(--bg-primary)); color: rgb(var(--text-brand));">/_</code></li>
-									<li>• REST and Realtime APIs at <code class="px-1 py-0.5 rounded" style="background-color: rgb(var(--bg-primary)); color: rgb(var(--text-brand));">/api/*</code></li>
+								<ul class="text-sm space-y-2">
+									<li class="flex items-start gap-2" style="color: rgb(var(--text-secondary));">
+										<svg class="w-5 h-5 mt-0.5 flex-shrink-0 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+										</svg>
+										<span>SQLite database with realtime subscriptions</span>
+									</li>
+									<li class="flex items-start gap-2" style="color: rgb(var(--text-secondary));">
+										<svg class="w-5 h-5 mt-0.5 flex-shrink-0 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+										</svg>
+										<span>Built-in authentication and file storage</span>
+									</li>
+									<li class="flex items-start gap-2" style="color: rgb(var(--text-secondary));">
+										<svg class="w-5 h-5 mt-0.5 flex-shrink-0 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+										</svg>
+										<span>Admin dashboard at <code class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: rgb(var(--bg-primary)); color: rgb(var(--text-brand)); border: 1px solid rgb(var(--border-primary));">/_</code></span>
+									</li>
+									<li class="flex items-start gap-2" style="color: rgb(var(--text-secondary));">
+										<svg class="w-5 h-5 mt-0.5 flex-shrink-0 text-primary-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+										</svg>
+										<span>REST and Realtime APIs at <code class="px-2 py-0.5 rounded font-mono text-xs" style="background-color: rgb(var(--bg-primary)); color: rgb(var(--text-brand)); border: 1px solid rgb(var(--border-primary));">/api/*</code></span>
+									</li>
 								</ul>
 							</div>
 						</div>
@@ -767,7 +880,14 @@
 
 			<!-- Build Configuration -->
 			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
-				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Build Configuration</h3>
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg">
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Build Configuration</h3>
+				</div>
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<Input
@@ -802,7 +922,14 @@
 
 			<!-- Port Configuration -->
 			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
-				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Port Configuration</h3>
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center shadow-lg">
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Port Configuration</h3>
+				</div>
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<Input
@@ -827,7 +954,14 @@
 
 			<!-- Domain Configuration -->
 			<div class="space-y-4 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
-				<h3 class="text-lg font-medium" style="color: rgb(var(--text-primary));">Domain (Optional)</h3>
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-lg">
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Domain (Optional)</h3>
+				</div>
 
 				<Input
 					label="Custom Domain"
@@ -842,22 +976,30 @@
 
 			<!-- Deployment Settings -->
 			<div class="pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
-				<div class="flex items-start">
+				<div class="flex items-center gap-3 mb-4">
+					<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-pink-600 flex items-center justify-center shadow-lg">
+						<svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+						</svg>
+					</div>
+					<h3 class="text-xl font-bold" style="color: rgb(var(--text-primary));">Deployment Settings</h3>
+				</div>
+				<div class="flex items-start p-4 rounded-xl hover-lift transition-all" style="background-color: rgb(var(--bg-secondary)); border: 1px solid rgb(var(--border-primary));">
 					<div class="flex items-center h-5">
 						<input
 							id="auto-deploy"
 							type="checkbox"
 							bind:checked={autoDeploy}
 							disabled={loading}
-							class="h-4 w-4 rounded text-primary-800 focus:ring-primary-800"
-							style="border-color: rgb(var(--border-primary)); background-color: rgb(var(--bg-secondary));"
+							class="h-5 w-5 rounded text-primary-800 focus:ring-2 focus:ring-primary-600 transition-all cursor-pointer"
+							style="border-color: rgb(var(--border-primary)); background-color: rgb(var(--bg-primary));"
 						/>
 					</div>
-					<div class="ml-3 text-sm">
-						<label for="auto-deploy" class="font-medium" style="color: rgb(var(--text-primary));">
+					<div class="ml-3 flex-1">
+						<label for="auto-deploy" class="text-base font-semibold cursor-pointer" style="color: rgb(var(--text-primary));">
 							Auto Deploy
 						</label>
-						<p style="color: rgb(var(--text-secondary));">
+						<p class="text-sm mt-1" style="color: rgb(var(--text-secondary));">
 							Automatically deploy when changes are pushed to the repository
 						</p>
 					</div>
@@ -865,16 +1007,23 @@
 			</div>
 
 			<!-- Actions -->
-			<div class="flex justify-end space-x-3 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
-				<Button variant="ghost" onclick={() => window.history.back()} disabled={loading}>
+			<div class="flex justify-end gap-3 pt-6" style="border-top: 1px solid rgb(var(--border-primary));">
+				<Button variant="ghost" onclick={() => window.history.back()} disabled={loading} class="hover:scale-105 transition-transform">
+					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+					</svg>
 					Cancel
 				</Button>
-				<Button type="submit" {loading} disabled={loading}>
-					{loading ? 'Creating...' : 'Create Project'}
+				<Button type="submit" {loading} disabled={loading} class="btn-primary glow-green-hover hover:scale-105 transition-transform">
+					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+					</svg>
+					{loading ? 'Creating Project...' : 'Create Project'}
 				</Button>
 			</div>
 		</form>
-	</Card>
+				</div>
+			</div>
 		</div>
 	{/if}
 </div>

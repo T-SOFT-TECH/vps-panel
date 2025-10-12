@@ -60,7 +60,9 @@ func main() {
 	})
 
 	// Setup routes
-	routes.Setup(app, db, cfg)
+	if err := routes.Setup(app, db, cfg); err != nil {
+		log.Fatalf("Failed to setup routes: %v", err)
+	}
 
 	// Graceful shutdown
 	c := make(chan os.Signal, 1)

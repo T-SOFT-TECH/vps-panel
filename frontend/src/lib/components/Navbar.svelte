@@ -5,6 +5,14 @@
 	import ThemeToggle from './ThemeToggle.svelte';
 
 	let mobileMenuOpen = $state(false);
+	let scrolled = $state(false);
+
+	// Handle scroll effect
+	if (typeof window !== 'undefined') {
+		window.addEventListener('scroll', () => {
+			scrolled = window.scrollY > 10;
+		});
+	}
 
 	const navigation = [
 		{ name: 'Dashboard', href: '/dashboard', icon: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
@@ -17,37 +25,52 @@
 	}
 </script>
 
-<nav class="sticky top-0 z-50 modern-card border-b shadow-lg">
+<nav class="sticky top-0 z-50 transition-all duration-300 {scrolled ? 'glass-pro shadow-2xl' : 'glass-card shadow-lg'} border-b">
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 		<div class="flex justify-between h-16">
 			<!-- Logo -->
 			<div class="flex items-center">
 				<a href="/dashboard" class="flex items-center gap-3 group">
-					<img
-						src="/img/My-Icon.webp"
-						alt="TSOFT Logo"
-						class="w-10 h-10 rounded-lg shadow-md group-hover:scale-110 transition-transform duration-200"
-					/>
-					<span class="text-lg font-bold" style="color: rgb(var(--text-primary));">
-						VPS Panel
-					</span>
+					<div class="relative">
+						<div class="absolute inset-0 bg-gradient-brand rounded-xl blur-md opacity-50 group-hover:opacity-75 transition-opacity"></div>
+						<div class="relative w-10 h-10 rounded-xl bg-gradient-brand shadow-lg group-hover:scale-110 transition-transform duration-200 glow-green flex items-center justify-center">
+							<img
+								src="/img/My-Icon.webp"
+								alt="TSOFT Logo"
+								class="w-8 h-8 rounded-lg"
+							/>
+						</div>
+					</div>
+					<div class="flex flex-col">
+						<span class="text-lg font-bold bg-gradient-to-r from-primary-700 to-primary-900 bg-clip-text text-transparent">
+							VPS Panel
+						</span>
+						<span class="text-xs font-medium" style="color: rgb(var(--text-tertiary));">
+							by TSOFT
+						</span>
+					</div>
 				</a>
 
 				<!-- Desktop Navigation -->
-				<div class="hidden sm:ml-8 sm:flex sm:space-x-2">
+				<div class="hidden sm:ml-10 sm:flex sm:space-x-2">
 					{#each navigation as item}
 						<a
 							href={item.href}
-							class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+							class="relative inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 group
 							       {isActive(item.href)
-								? 'bg-gradient-brand text-white shadow-md'
-								: 'hover:bg-opacity-50'}"
+								? 'text-white'
+								: 'hover:scale-105'}"
 							style="color: {isActive(item.href) ? 'white' : 'rgb(var(--text-secondary))'}"
 						>
-							<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
-							</svg>
-							{item.name}
+							{#if isActive(item.href)}
+								<div class="absolute inset-0 bg-gradient-brand rounded-xl shadow-lg glow-green"></div>
+							{/if}
+							<div class="relative flex items-center gap-2">
+								<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
+								</svg>
+								{item.name}
+							</div>
 						</a>
 					{/each}
 				</div>
@@ -58,38 +81,53 @@
 				<ThemeToggle />
 
 				{#if authStore.user}
-					<div class="flex items-center gap-3 pl-3 border-l" style="border-color: rgb(var(--border-primary));">
-						<div class="flex items-center gap-2">
-							<div class="w-9 h-9 rounded-lg bg-gradient-brand flex items-center justify-center text-white font-semibold text-sm shadow-md">
-								{authStore.user.name.charAt(0).toUpperCase()}
+					<div class="flex items-center gap-3 pl-3 ml-3 border-l" style="border-color: rgb(var(--border-primary));">
+						<div class="flex items-center gap-3 group cursor-pointer">
+							<div class="relative">
+								<div class="absolute inset-0 bg-gradient-brand rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
+								<div class="relative w-10 h-10 rounded-xl bg-gradient-brand flex items-center justify-center text-white font-bold text-sm shadow-lg group-hover:scale-110 transition-transform">
+									{authStore.user.name.charAt(0).toUpperCase()}
+								</div>
 							</div>
-							<span class="text-sm font-medium" style="color: rgb(var(--text-primary));">
-								{authStore.user.name}
-							</span>
+							<div class="flex flex-col">
+								<span class="text-sm font-bold" style="color: rgb(var(--text-primary));">
+									{authStore.user.name}
+								</span>
+								<span class="text-xs" style="color: rgb(var(--text-tertiary));">
+									Administrator
+								</span>
+							</div>
 						</div>
-						<Button variant="ghost" size="sm" onclick={() => authStore.logout()}>
-							<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<button
+							onclick={() => authStore.logout()}
+							class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 hover:scale-105 border group"
+							style="background-color: rgb(var(--bg-tertiary)); color: rgb(var(--text-primary)); border-color: rgb(var(--border-primary));"
+						>
+							<svg class="w-4 h-4 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
 							</svg>
 							Sign out
-						</Button>
+						</button>
 					</div>
 				{:else}
-					<Button variant="primary" size="sm" onclick={() => window.location.href = '/login'}>
+					<Button variant="primary" size="sm" onclick={() => window.location.href = '/login'} class="glow-green-hover">
+						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+						</svg>
 						Sign in
 					</Button>
 				{/if}
 			</div>
 
 			<!-- Mobile menu button -->
-			<div class="flex items-center sm:hidden gap-2">
+			<div class="flex items-center sm:hidden gap-3">
 				<ThemeToggle />
 				<button
 					type="button"
 					onclick={() => mobileMenuOpen = !mobileMenuOpen}
-					class="inline-flex items-center justify-center p-2 rounded-lg transition-all duration-200
-					       hover:scale-105"
-					style="color: rgb(var(--text-secondary));"
+					class="inline-flex items-center justify-center p-2 rounded-xl transition-all duration-200
+					       hover:scale-110 border"
+					style="color: rgb(var(--text-secondary)); border-color: rgb(var(--border-primary)); background-color: rgb(var(--bg-tertiary));"
 					aria-label="Toggle mobile menu"
 				>
 					{#if mobileMenuOpen}
@@ -108,51 +146,67 @@
 
 	<!-- Mobile menu -->
 	{#if mobileMenuOpen}
-		<div class="sm:hidden border-t" style="border-color: rgb(var(--border-primary));">
+		<div class="sm:hidden border-t slide-in-up" style="border-color: rgb(var(--border-primary)); background-color: rgb(var(--bg-secondary) / 0.95);">
 			<div class="px-2 pt-2 pb-3 space-y-1">
-				{#each navigation as item}
+				{#each navigation as item, i}
 					<a
 						href={item.href}
-						class="flex items-center gap-3 px-3 py-3 rounded-lg text-base font-medium transition-all duration-200
+						class="relative flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-200 group fade-in
 						       {isActive(item.href)
-							? 'bg-gradient-brand text-white'
+							? 'text-white'
 							: ''}"
-						style="color: {isActive(item.href) ? 'white' : 'rgb(var(--text-secondary))'}"
+						style="color: {isActive(item.href) ? 'white' : 'rgb(var(--text-secondary))'}; animation-delay: {i * 0.1}s;"
 					>
-						<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
-						</svg>
-						{item.name}
+						{#if isActive(item.href)}
+							<div class="absolute inset-0 bg-gradient-brand rounded-xl shadow-lg"></div>
+						{/if}
+						<div class="relative flex items-center gap-3 w-full">
+							<div class="w-10 h-10 rounded-lg flex items-center justify-center {isActive(item.href) ? 'bg-white/20' : ''}" style="{!isActive(item.href) ? 'background-color: rgb(var(--bg-tertiary));' : ''}">
+								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon} />
+								</svg>
+							</div>
+							{item.name}
+						</div>
 					</a>
 				{/each}
 			</div>
 
 			<div class="pt-4 pb-3 border-t" style="border-color: rgb(var(--border-primary));">
 				{#if authStore.user}
-					<div class="px-4">
-						<div class="flex items-center mb-3">
-							<div class="h-12 w-12 rounded-xl bg-gradient-brand flex items-center justify-center text-white font-bold text-lg shadow-lg">
+					<div class="px-4 fade-in">
+						<div class="flex items-center mb-4 p-3 rounded-xl" style="background-color: rgb(var(--bg-tertiary));">
+							<div class="h-14 w-14 rounded-xl bg-gradient-brand flex items-center justify-center text-white font-bold text-xl shadow-lg glow-green">
 								{authStore.user.name.charAt(0).toUpperCase()}
 							</div>
-							<div class="ml-3">
-								<div class="text-base font-semibold" style="color: rgb(var(--text-primary));">{authStore.user.name}</div>
+							<div class="ml-3 flex-1">
+								<div class="text-base font-bold" style="color: rgb(var(--text-primary));">{authStore.user.name}</div>
 								<div class="text-sm" style="color: rgb(var(--text-secondary));">{authStore.user.email}</div>
+								<div class="text-xs mt-1 inline-flex items-center px-2 py-0.5 rounded-md bg-gradient-brand text-white">
+									<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+									</svg>
+									Administrator
+								</div>
 							</div>
 						</div>
-						<Button
-							variant="outline"
-							class="w-full"
+						<button
 							onclick={() => authStore.logout()}
+							class="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105 border group"
+							style="background-color: rgb(var(--bg-tertiary)); color: rgb(var(--text-primary)); border-color: rgb(var(--border-primary));"
 						>
-							<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
 							</svg>
 							Sign out
-						</Button>
+						</button>
 					</div>
 				{:else}
 					<div class="px-4">
-						<Button variant="primary" class="w-full" onclick={() => window.location.href = '/login'}>
+						<Button variant="primary" class="w-full glow-green-hover" onclick={() => window.location.href = '/login'}>
+							<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+							</svg>
 							Sign in
 						</Button>
 					</div>

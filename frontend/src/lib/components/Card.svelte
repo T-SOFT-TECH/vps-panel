@@ -6,16 +6,24 @@
 		class?: string;
 		padding?: boolean;
 		hover?: boolean;
+		variant?: 'default' | 'glass' | 'elevated';
 	}
 
 	let {
 		children,
 		class: className = '',
 		padding = true,
-		hover = false
+		hover = false,
+		variant = 'default'
 	}: Props = $props();
 
-	const classes = `bg-zinc-900 rounded-lg border border-zinc-800 shadow-sm ${padding ? 'p-6' : ''} ${hover ? 'hover:shadow-md hover:border-zinc-700 transition-all' : ''} ${className}`;
+	const variants = {
+		default: 'modern-card',
+		glass: 'glass-card',
+		elevated: 'elevated-card'
+	};
+
+	const classes = `${variants[variant]} ${padding ? 'p-6' : ''} ${hover ? 'hover-lift card-highlight cursor-pointer' : ''} ${className}`;
 </script>
 
 <div class={classes}>

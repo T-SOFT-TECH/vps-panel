@@ -9,12 +9,15 @@ import (
 	"github.com/vps-panel/backend/internal/config"
 )
 
-func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
+func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) error {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg)
 	projectHandler := handlers.NewProjectHandler(db, cfg)
 	deploymentHandler := handlers.NewDeploymentHandler(db, cfg)
-	webhookHandler := handlers.NewWebhookHandler(db, cfg)
+	webhookHandler, err := handlers.NewWebhookHandler(db, cfg)
+	if err != nil {
+		return err
+	}
 	gitProviderHandler := handlers.NewGitProviderHandler(db, cfg)
 
 	// API v1 routes
@@ -87,9 +90,17 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) {
 	domains.Put("/:domainId", projectHandler.UpdateDomain)
 	domains.Delete("/:domainId", projectHandler.DeleteDomain)
 
-	// Webhooks (no auth - validated by secret)
+	// Webhook management (protected - require authentication)
+	webhook := projects.Group("/:id/webhook")
+	webhook.Get("/", webhookHandler.GetWebhookInfo)
+	webhook.Post("/enable", webhookHandler.EnableWebhook)
+	webhook.Post("/disable", webhookHandler.DisableWebhook)
+
+	// Webhook receivers (no auth - validated by secret)
 	webhooks := api.Group("/webhooks")
-	webhooks.Post("/github", webhookHandler.HandleGitHub)
-	webhooks.Post("/gitlab", webhookHandler.HandleGitLab)
-	webhooks.Post("/bitbucket", webhookHandler.HandleBitbucket)
+	webhooks.Post("/github/:project_id", webhookHandler.HandleGitHub)
+	webhooks.Post("/gitlab/:project_id", webhookHandler.HandleGitLab)
+	webhooks.Post("/gitea/:project_id", webhookHandler.HandleGitea)
+
+	return nil
 }

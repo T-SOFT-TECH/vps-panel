@@ -54,6 +54,7 @@ type Config struct {
 
 	// Panel Domain (for auto-generating subdomains)
 	PanelDomain string
+	PanelURL    string // Full URL to panel (for webhook URLs)
 }
 
 func Load() *Config {
@@ -105,6 +106,7 @@ func Load() *Config {
 
 		// Panel Domain
 		PanelDomain: getEnv("PANEL_DOMAIN", ""),
+		PanelURL:    getEnv("PANEL_URL", ""),
 	}
 }
 

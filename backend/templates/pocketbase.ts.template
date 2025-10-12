@@ -1,0 +1,16 @@
+import PocketBase from 'pocketbase';
+import { browser } from '$app/environment';
+
+// Environment-aware PocketBase URL selection
+// - Client-side (browser): Uses public URL (goes through domain/Caddy)
+// - Server-side (SSR): Uses internal Docker network URL (fast localhost communication)
+const pbUrl = browser
+  ? (import.meta.env.PUBLIC_POCKETBASE_URL || 'http://localhost:8090')
+  : (import.meta.env.POCKETBASE_URL || 'http://localhost:8090');
+
+export const pb = new PocketBase(pbUrl);
+
+// Optional: Log which URL is being used (useful for debugging)
+if (import.meta.env.DEV) {
+  console.log(`PocketBase initialized with URL: ${pbUrl} (${browser ? 'browser' : 'server'})`);
+}

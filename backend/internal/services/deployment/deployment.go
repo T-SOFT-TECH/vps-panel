@@ -584,6 +584,10 @@ func (s *DeploymentService) generateSvelteKitDockerfile(nodeVersion, outputDir s
 
 WORKDIR /app
 
+# Accept build args for environment variables (used during build if needed)
+ARG PUBLIC_POCKETBASE_URL
+ARG POCKETBASE_URL
+
 # Copy package files
 COPY package*.json ./
 
@@ -591,6 +595,11 @@ COPY package*.json ./
 RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 COPY . .
+
+# Make build args available as environment variables during build
+ENV PUBLIC_POCKETBASE_URL=$PUBLIC_POCKETBASE_URL
+ENV POCKETBASE_URL=$POCKETBASE_URL
+
 RUN npm run build
 
 # Show build output for debugging
@@ -612,6 +621,9 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV NODE_ENV=production
+
+# Note: Runtime environment variables (PUBLIC_POCKETBASE_URL, POCKETBASE_URL, etc.)
+# are injected via docker-compose environment section for SSR
 
 CMD ["node", "index.js"]
 `, nodeVersion, outputDir, outputDir, nodeVersion, outputDir)
