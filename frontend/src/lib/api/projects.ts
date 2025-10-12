@@ -106,5 +106,45 @@ export const projectsAPI = {
 
 	async deleteDomain(projectId: number, domainId: number): Promise<void> {
 		return api.delete(`/projects/${projectId}/domains/${domainId}`);
+	},
+
+	// Webhooks
+	async getWebhookInfo(projectId: number): Promise<{
+		enabled: boolean;
+		webhook?: {
+			secret: string;
+			urls: {
+				github: string;
+				gitlab: string;
+				gitea: string;
+			};
+			branch: string;
+		};
+	}> {
+		return api.get(`/projects/${projectId}/webhook`);
+	},
+
+	async enableWebhook(projectId: number): Promise<{
+		auto_created: boolean;
+		manual_setup_required?: boolean;
+		webhook?: {
+			secret: string;
+			urls: {
+				github: string;
+				gitlab: string;
+				gitea: string;
+			};
+			branch: string;
+		};
+		message?: string;
+	}> {
+		return api.post(`/projects/${projectId}/webhook/enable`, {});
+	},
+
+	async disableWebhook(projectId: number): Promise<{
+		auto_deleted: boolean;
+		message?: string;
+	}> {
+		return api.post(`/projects/${projectId}/webhook/disable`, {});
 	}
 };

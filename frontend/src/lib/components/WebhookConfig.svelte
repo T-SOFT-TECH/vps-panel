@@ -4,7 +4,7 @@
 	import Badge from '$lib/components/Badge.svelte';
 	import Alert from '$lib/components/Alert.svelte';
 	import Modal from '$lib/components/Modal.svelte';
-	import { API_BASE_URL } from '$lib/config';
+	import { projectsAPI } from '$lib/api/projects';
 
 	interface WebhookInfo {
 		enabled: boolean;
@@ -56,15 +56,7 @@
 
 		loading = true;
 		try {
-			const response = await fetch(`${API_BASE_URL}/projects/${projectId}/webhook`, {
-				credentials: 'include'
-			});
-
-			if (!response.ok) {
-				throw new Error('Failed to load webhook info');
-			}
-
-			webhookInfo = await response.json();
+			webhookInfo = await projectsAPI.getWebhookInfo(projectId);
 		} catch (err) {
 			console.error('Failed to load webhook info:', err);
 			error = 'Failed to load webhook configuration';
@@ -81,17 +73,7 @@
 		success = '';
 
 		try {
-			const response = await fetch(`${API_BASE_URL}/projects/${projectId}/webhook/enable`, {
-				method: 'POST',
-				credentials: 'include'
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to enable webhook');
-			}
-
-			const data = await response.json();
+			const data = await projectsAPI.enableWebhook(projectId);
 
 			await loadWebhookInfo();
 
@@ -124,17 +106,7 @@
 		success = '';
 
 		try {
-			const response = await fetch(`${API_BASE_URL}/projects/${projectId}/webhook/disable`, {
-				method: 'POST',
-				credentials: 'include'
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || 'Failed to disable webhook');
-			}
-
-			const data = await response.json();
+			const data = await projectsAPI.disableWebhook(projectId);
 
 			await loadWebhookInfo();
 
