@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -852,13 +851,4 @@ func randomString(length int) string {
 		b[i] = charset[i%len(charset)]
 	}
 	return string(b)
-}
-
-func generateWebhookSecret() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	secret := make([]byte, 32)
-	for i := range secret {
-		secret[i] = charset[time.Now().UnixNano()%int64(len(charset))]
-	}
-	return string(secret)
 }
