@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -187,6 +188,14 @@ func (h *ProjectHandler) Create(c *fiber.Ctx) error {
 		BackendPort:    req.BackendPort,
 		AutoDeploy:     req.AutoDeploy,
 		Status:         "pending",
+	}
+
+	// Generate webhook secret if auto-deploy is enabled
+	if req.AutoDeploy {
+		project.WebhookSecret = generateWebhookSecret()
+		if project.AutoDeployBranch == "" {
+			project.AutoDeployBranch = req.GitBranch
+		}
 	}
 
 	if err := h.db.Create(&project).Error; err != nil {
@@ -843,4 +852,13 @@ func randomString(length int) string {
 		b[i] = charset[i%len(charset)]
 	}
 	return string(b)
+}
+
+func generateWebhookSecret() string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	secret := make([]byte, 32)
+	for i := range secret {
+		secret[i] = charset[time.Now().UnixNano()%int64(len(charset))]
+	}
+	return string(secret)
 }

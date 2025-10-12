@@ -612,7 +612,7 @@ func (h *WebhookHandler) GetWebhookInfo(c *fiber.Ctx) error {
 	// Generate webhook URLs
 	baseURL := h.cfg.PanelURL
 	if baseURL == "" {
-		baseURL = fmt.Sprintf("http://localhost:%d", h.cfg.Port)
+		baseURL = fmt.Sprintf("http://localhost:%s", h.cfg.Port)
 	}
 
 	return c.JSON(fiber.Map{
@@ -620,9 +620,9 @@ func (h *WebhookHandler) GetWebhookInfo(c *fiber.Ctx) error {
 		"webhook": fiber.Map{
 			"secret": project.WebhookSecret,
 			"urls": fiber.Map{
-				"github": fmt.Sprintf("%s/api/webhooks/github/%d", baseURL, project.ID),
-				"gitlab": fmt.Sprintf("%s/api/webhooks/gitlab/%d", baseURL, project.ID),
-				"gitea":  fmt.Sprintf("%s/api/webhooks/gitea/%d", baseURL, project.ID),
+				"github": fmt.Sprintf("%s/api/v1/webhooks/github/%d", baseURL, project.ID),
+				"gitlab": fmt.Sprintf("%s/api/v1/webhooks/gitlab/%d", baseURL, project.ID),
+				"gitea":  fmt.Sprintf("%s/api/v1/webhooks/gitea/%d", baseURL, project.ID),
 			},
 			"branch": project.AutoDeployBranch,
 		},
