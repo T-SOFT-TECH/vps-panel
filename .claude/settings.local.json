@@ -42,7 +42,8 @@
       "Bash(GOOS=linux GOARCH=amd64 /usr/local/go/bin/go build:*)",
       "Bash(awk:*)",
       "Bash(cat:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(netstat:*)"
     ],
     "deny": [],
     "ask": []
