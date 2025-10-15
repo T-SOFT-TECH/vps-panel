@@ -2,8 +2,11 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -1008,6 +1011,186 @@ func (h *ProjectHandler) UpdatePocketBase(c *fiber.Ctx) error {
 		"current_version":  project.PocketBaseVersion,
 		"target_version":   latestVersion,
 		"deployment":       deployment,
+	})
+}
+
+// CreatePocketBaseAdmin creates a new admin account in PocketBase via API
+func (h *ProjectHandler) CreatePocketBaseAdmin(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+	projectID, err := strconv.ParseUint(c.Params("id"), 10, 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).
+		Preload("Domains").
+		First(&project).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Project not found",
+		})
+	}
+
+	// Check if project uses PocketBase
+	if project.BaaSType != models.BaaSPocketBase {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "This project does not use PocketBase",
+		})
+	}
+
+	var req struct {
+		Email           string `json:"email" validate:"required,email"`
+		Password        string `json:"password" validate:"required,min=8"`
+		PasswordConfirm string `json:"password_confirm" validate:"required"`
+	}
+
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid request body",
+		})
+	}
+
+	if req.Password != req.PasswordConfirm {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Passwords do not match",
+		})
+	}
+
+	// Get PocketBase URL from project domains
+	var pocketbaseURL string
+	for _, domain := range project.Domains {
+		if domain.IsActive {
+			protocol := "https"
+			if !domain.SSLEnabled {
+				protocol = "http"
+			}
+			pocketbaseURL = fmt.Sprintf("%s://%s", protocol, domain.Domain)
+			break
+		}
+	}
+
+	if pocketbaseURL == "" {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "No active domain found for project",
+		})
+	}
+
+	// Create admin via PocketBase API
+	adminData := map[string]interface{}{
+		"email":           req.Email,
+		"password":        req.Password,
+		"passwordConfirm": req.PasswordConfirm,
+	}
+
+	jsonData, err := json.Marshal(adminData)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to prepare admin data",
+		})
+	}
+
+	// Make request to PocketBase API
+	apiURL := fmt.Sprintf("%s/api/admins", pocketbaseURL)
+	resp, err := http.Post(apiURL, "application/json", strings.NewReader(string(jsonData)))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to connect to PocketBase: " + err.Error(),
+		})
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return c.Status(resp.StatusCode).JSON(fiber.Map{
+			"error":   "Failed to create admin account",
+			"details": string(body),
+		})
+	}
+
+	log.Printf("✓ Created PocketBase admin for project %d: %s", project.ID, req.Email)
+
+	return c.JSON(fiber.Map{
+		"message": "Admin account created successfully",
+		"email":   req.Email,
+		"url":     fmt.Sprintf("%s/_", pocketbaseURL),
+	})
+}
+
+// ResetPocketBaseDatabase completely resets the PocketBase database
+func (h *ProjectHandler) ResetPocketBaseDatabase(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+	projectID, err := strconv.ParseUint(c.Params("id"), 10, 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Project not found",
+		})
+	}
+
+	// Check if project uses PocketBase
+	if project.BaaSType != models.BaaSPocketBase {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "This project does not use PocketBase",
+		})
+	}
+
+	// Stop PocketBase container
+	ctx := context.Background()
+	dockerService, err := docker.NewDockerService()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to connect to Docker",
+		})
+	}
+	defer dockerService.Close()
+
+	projectName := fmt.Sprintf("vps-panel-project-%d", project.ID)
+	workDir := filepath.Join(h.cfg.ProjectsDir, fmt.Sprintf("project-%d", project.ID))
+
+	log.Printf("Stopping PocketBase container for project %d to reset database...", project.ID)
+
+	// Stop containers
+	if err := dockerService.ComposeDown(ctx, workDir, projectName); err != nil {
+		log.Printf("Warning: failed to stop containers: %v", err)
+	}
+
+	// Delete pb_data directory
+	pbDataDir := filepath.Join(workDir, "pb_data")
+	if err := os.RemoveAll(pbDataDir); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to delete PocketBase data: " + err.Error(),
+		})
+	}
+
+	log.Printf("✓ Deleted PocketBase data for project %d", project.ID)
+
+	// Recreate empty pb_data directory
+	if err := os.MkdirAll(pbDataDir, 0755); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create fresh pb_data directory",
+		})
+	}
+
+	// Restart containers
+	if err := dockerService.ComposeUp(ctx, workDir, projectName); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to restart PocketBase: " + err.Error(),
+		})
+	}
+
+	log.Printf("✓ Reset and restarted PocketBase for project %d", project.ID)
+
+	return c.JSON(fiber.Map{
+		"message": "PocketBase database has been reset successfully. You can now create a new admin account.",
 	})
 }
 

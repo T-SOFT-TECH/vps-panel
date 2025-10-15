@@ -42,6 +42,12 @@
 	let checkingUpdate = $state(false);
 	let updating = $state(false);
 
+	// PocketBase admin management state
+	let adminModalOpen = $state(false);
+	let adminForm = $state({ email: '', password: '', password_confirm: '' });
+	let creatingAdmin = $state(false);
+	let resettingDatabase = $state(false);
+
 
 
 	onMount(async () => {
@@ -233,6 +239,65 @@
 			error = err instanceof Error ? err.message : 'Failed to update PocketBase';
 		} finally {
 			updating = false;
+		}
+	}
+
+	// PocketBase admin management functions
+	function openAdminModal() {
+		adminForm = { email: '', password: '', password_confirm: '' };
+		adminModalOpen = true;
+	}
+
+	async function handleCreateAdmin() {
+		if (!adminForm.email || !adminForm.password || !adminForm.password_confirm) {
+			error = 'All fields are required';
+			return;
+		}
+
+		if (adminForm.password !== adminForm.password_confirm) {
+			error = 'Passwords do not match';
+			return;
+		}
+
+		if (adminForm.password.length < 8) {
+			error = 'Password must be at least 8 characters';
+			return;
+		}
+
+		creatingAdmin = true;
+		error = '';
+
+		try {
+			const result = await projectsAPI.createPocketBaseAdmin(projectId, adminForm);
+			adminModalOpen = false;
+			alert(`Admin account created successfully! You can now login at ${result.url}`);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to create admin account';
+		} finally {
+			creatingAdmin = false;
+		}
+	}
+
+	async function handleResetDatabase() {
+		if (!confirm('⚠️ WARNING: This will DELETE ALL PocketBase data including users, collections, and files. This action cannot be undone. Are you absolutely sure?')) {
+			return;
+		}
+
+		if (!confirm('Final confirmation: All PocketBase data will be permanently deleted. Continue?')) {
+			return;
+		}
+
+		resettingDatabase = true;
+		error = '';
+
+		try {
+			await projectsAPI.resetPocketBaseDatabase(projectId);
+			alert('PocketBase database has been reset successfully. You can now create a new admin account.');
+			await loadProject();
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to reset database';
+		} finally {
+			resettingDatabase = false;
 		}
 	}
 </script>

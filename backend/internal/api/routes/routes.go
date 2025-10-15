@@ -103,10 +103,12 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) error {
 	webhook.Post("/enable", webhookHandler.EnableWebhook)
 	webhook.Post("/disable", webhookHandler.DisableWebhook)
 
-	// PocketBase update management
+	// PocketBase management
 	pocketbase := projects.Group("/:id/pocketbase")
 	pocketbase.Get("/check-update", projectHandler.CheckPocketBaseUpdate)
 	pocketbase.Post("/update", projectHandler.UpdatePocketBase)
+	pocketbase.Post("/create-admin", projectHandler.CreatePocketBaseAdmin)
+	pocketbase.Post("/reset-database", projectHandler.ResetPocketBaseDatabase)
 
 	return nil
 }

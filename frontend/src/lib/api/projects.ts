@@ -166,5 +166,23 @@ export const projectsAPI = {
 		target_version: string;
 	}> {
 		return api.post(`/projects/${projectId}/pocketbase/update`, {});
+	},
+
+	// PocketBase admin management
+	async createPocketBaseAdmin(
+		projectId: number,
+		data: { email: string; password: string; password_confirm: string }
+	): Promise<{
+		message: string;
+		email: string;
+		url: string;
+	}> {
+		return api.post(`/projects/${projectId}/pocketbase/create-admin`, data);
+	},
+
+	async resetPocketBaseDatabase(projectId: number): Promise<{
+		message: string;
+	}> {
+		return api.post(`/projects/${projectId}/pocketbase/reset-database`, {});
 	}
 };
