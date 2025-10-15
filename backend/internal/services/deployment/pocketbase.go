@@ -448,6 +448,17 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 
 	s.logBuild(deployment.ID, "✓ All images built successfully", "info")
 
+	// Step 2.5: Check if this is first-time setup BEFORE starting containers
+	pbDataPath := filepath.Join(workDir, "pb_data", "data.db")
+	isFirstTimeSetup := false
+	if _, err := os.Stat(pbDataPath); os.IsNotExist(err) {
+		isFirstTimeSetup = true
+		s.logBuild(deployment.ID, "", "info")
+		s.logBuild(deployment.ID, "📝 First-time PocketBase deployment detected", "info")
+		s.logBuild(deployment.ID, "   You'll need to create an admin account after deployment", "info")
+		s.logBuild(deployment.ID, "", "info")
+	}
+
 	// Step 3: Start containers
 	deployment.Status = models.DeploymentDeploying
 	s.db.Save(&deployment)
@@ -490,9 +501,8 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 		}
 	}
 
-	// Step 6: Check if this is first-time setup and show admin registration instructions
-	pbDataPath := filepath.Join(workDir, "pb_data", "data.db")
-	if _, err := os.Stat(pbDataPath); os.IsNotExist(err) {
+	// Step 6: Show appropriate setup instructions based on first-time detection
+	if isFirstTimeSetup {
 		s.logBuild(deployment.ID, "", "info")
 		s.logBuild(deployment.ID, "╔════════════════════════════════════════════════════════╗", "info")
 		s.logBuild(deployment.ID, "║        🎉 FIRST-TIME POCKETBASE SETUP REQUIRED        ║", "info")
