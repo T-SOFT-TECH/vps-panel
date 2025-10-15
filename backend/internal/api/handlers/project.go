@@ -384,7 +384,8 @@ func (h *ProjectHandler) Delete(c *fiber.Ctx) error {
 					(strings.Contains(project.GitURL, "gitlab.com") && provider.Type == "gitlab") ||
 					(provider.Type == "gitea" && strings.Contains(project.GitURL, provider.URL)) {
 					// Try to delete the webhook
-					if err := h.webhookService.DeleteWebhook(&project, provider); err != nil {
+					baseURL := getBaseURL(c, h.cfg)
+					if err := h.webhookService.DeleteWebhook(&project, provider, baseURL); err != nil {
 						log.Printf("Warning: failed to delete webhook for project %d: %v", project.ID, err)
 					} else {
 						log.Printf("✓ Deleted webhook from %s", provider.Type)
