@@ -33,12 +33,25 @@
 	let envSaving = $state(false);
 	let envDeleting = $state<number | null>(null);
 
+	// PocketBase update state
+	let pocketbaseUpdateInfo = $state<{
+		current_version: string;
+		latest_version: string;
+		update_available: boolean;
+	} | null>(null);
+	let checkingUpdate = $state(false);
+	let updating = $state(false);
+
 
 
 	onMount(async () => {
 		await loadProject();
 		await loadDeployments();
 		await loadEnvironments();
+		// Check for PocketBase updates if project uses PocketBase
+		if (project && project.baas_type === 'pocketbase') {
+			await checkPocketBaseUpdate();
+		}
 	});
 
 	async function loadProject() {
@@ -178,6 +191,48 @@
 			error = err instanceof Error ? err.message : 'Failed to delete environment variable';
 		} finally {
 			envDeleting = null;
+		}
+	}
+
+	// PocketBase update functions
+	async function checkPocketBaseUpdate() {
+		if (!project || project.baas_type !== 'pocketbase') {
+			return;
+		}
+
+		checkingUpdate = true;
+
+		try {
+			pocketbaseUpdateInfo = await projectsAPI.checkPocketBaseUpdate(projectId);
+		} catch (err) {
+			console.error('Failed to check PocketBase update:', err);
+			// Silently fail - this is not critical
+		} finally {
+			checkingUpdate = false;
+		}
+	}
+
+	async function handlePocketBaseUpdate() {
+		if (!confirm('This will redeploy your project with the latest PocketBase version. Continue?')) {
+			return;
+		}
+
+		updating = true;
+		error = '';
+
+		try {
+			const result = await projectsAPI.updatePocketBase(projectId);
+			// Reload project and deployments to show the new deployment
+			await loadProject();
+			await loadDeployments();
+			await checkPocketBaseUpdate();
+
+			// Show success message
+			alert(`PocketBase update initiated! Deployment #${result.deployment_id} created. Updating from ${result.current_version} to ${result.target_version}.`);
+		} catch (err) {
+			error = err instanceof Error ? err.message : 'Failed to update PocketBase';
+		} finally {
+			updating = false;
 		}
 	}
 </script>
@@ -476,6 +531,96 @@
 							</div>
 						</Card>
 					{/if}
+				{/if}
+
+				<!-- PocketBase Version & Update -->
+				{#if project.baas_type === 'pocketbase'}
+					<div class="modern-card p-5 hover-lift transition-all">
+						<div class="flex items-center gap-2 mb-4">
+							<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-600 flex items-center justify-center">
+								<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+								</svg>
+							</div>
+							<h3 class="text-base font-bold" style="color: rgb(var(--text-primary));">PocketBase Version</h3>
+						</div>
+
+						{#if checkingUpdate}
+							<div class="text-center py-4">
+								<div class="inline-block w-6 h-6 border-2 border-primary-800 border-t-transparent rounded-full animate-spin"></div>
+								<p class="text-xs mt-2" style="color: rgb(var(--text-secondary));">Checking for updates...</p>
+							</div>
+						{:else if pocketbaseUpdateInfo}
+							<div class="space-y-3">
+								<div class="flex items-center justify-between">
+									<span class="text-sm" style="color: rgb(var(--text-secondary));">Current Version</span>
+									<span class="text-sm font-mono font-semibold" style="color: rgb(var(--text-primary));">
+										v{pocketbaseUpdateInfo.current_version}
+									</span>
+								</div>
+
+								{#if pocketbaseUpdateInfo.update_available}
+									<div class="flex items-center justify-between">
+										<span class="text-sm" style="color: rgb(var(--text-secondary));">Latest Version</span>
+										<div class="flex items-center gap-2">
+											<Badge variant="warning" class="text-xs">Update Available</Badge>
+											<span class="text-sm font-mono font-semibold" style="color: rgb(var(--text-brand));">
+												v{pocketbaseUpdateInfo.latest_version}
+											</span>
+										</div>
+									</div>
+
+									<div class="pt-2">
+										<Button
+											onclick={handlePocketBaseUpdate}
+											loading={updating}
+											disabled={updating}
+											class="w-full btn-primary glow-green-hover"
+											size="sm"
+										>
+											<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+											</svg>
+											{updating ? 'Updating...' : `Update to v${pocketbaseUpdateInfo.latest_version}`}
+										</Button>
+									</div>
+
+									<div class="mt-3 p-3 rounded-lg" style="background-color: rgb(var(--bg-secondary)); border-left: 3px solid rgb(234, 179, 8);">
+										<p class="text-xs" style="color: rgb(var(--text-secondary));">
+											A new deployment will be created with the latest PocketBase version. Your data will be preserved.
+										</p>
+									</div>
+								{:else}
+									<div class="flex items-center gap-2 p-3 rounded-lg" style="background-color: rgb(var(--bg-secondary)); border-left: 3px solid rgb(10, 101, 34);">
+										<svg class="w-4 h-4 text-primary-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+										</svg>
+										<p class="text-xs" style="color: rgb(var(--text-secondary));">
+											You're running the latest version
+										</p>
+									</div>
+								{/if}
+
+								<button
+									onclick={checkPocketBaseUpdate}
+									disabled={checkingUpdate}
+									class="w-full text-xs py-2 rounded-lg transition-colors disabled:opacity-50"
+									style="color: rgb(var(--text-brand));"
+									onmouseenter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.backgroundColor = 'rgb(var(--bg-secondary))'; }}
+									onmouseleave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+								>
+									Check for Updates
+								</button>
+							</div>
+						{:else}
+							<div class="text-center py-4">
+								<p class="text-sm mb-3" style="color: rgb(var(--text-secondary));">Version information unavailable</p>
+								<Button variant="ghost" size="sm" onclick={checkPocketBaseUpdate} disabled={checkingUpdate}>
+									Check for Updates
+								</Button>
+							</div>
+						{/if}
+					</div>
 				{/if}
 
 				<!-- Environment Variables -->

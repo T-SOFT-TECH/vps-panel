@@ -21,8 +21,9 @@ type GitHubRelease struct {
 	Name    string `json:"name"`
 }
 
-// fetchLatestPocketBaseVersion fetches the latest PocketBase version from GitHub API
-func fetchLatestPocketBaseVersion() (string, error) {
+// FetchLatestPocketBaseVersion fetches the latest PocketBase version from GitHub API
+// Exported for use by API handlers
+func FetchLatestPocketBaseVersion() (string, error) {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
@@ -68,7 +69,7 @@ func fetchLatestPocketBaseVersion() (string, error) {
 
 // getPocketBaseVersion gets the latest PocketBase version or falls back to a known stable version
 func getPocketBaseVersion() string {
-	version, err := fetchLatestPocketBaseVersion()
+	version, err := FetchLatestPocketBaseVersion()
 	if err != nil {
 		log.Printf("Warning: Failed to fetch latest PocketBase version from GitHub: %v", err)
 		log.Printf("Falling back to known stable version 0.30.0")

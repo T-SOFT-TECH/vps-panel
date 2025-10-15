@@ -14,6 +14,7 @@ import (
 	"github.com/vps-panel/backend/internal/config"
 	"github.com/vps-panel/backend/internal/models"
 	"github.com/vps-panel/backend/internal/services/caddy"
+	"github.com/vps-panel/backend/internal/services/deployment"
 	"github.com/vps-panel/backend/internal/services/detector"
 	"github.com/vps-panel/backend/internal/services/git"
 	"github.com/vps-panel/backend/internal/services/webhook"
@@ -816,6 +817,126 @@ func (h *ProjectHandler) ListDirectories(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"directories": directories,
+	})
+}
+
+// CheckPocketBaseUpdate checks if a PocketBase update is available for the project
+func (h *ProjectHandler) CheckPocketBaseUpdate(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+	projectID, err := strconv.ParseUint(c.Params("id"), 10, 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Project not found",
+		})
+	}
+
+	// Check if project uses PocketBase
+	if project.BaaSType != models.BaaSPocketBase {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "This project does not use PocketBase",
+		})
+	}
+
+	// Fetch latest version from GitHub
+	latestVersion, err := deployment.FetchLatestPocketBaseVersion()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":          "Failed to fetch latest PocketBase version",
+			"current_version": project.PocketBaseVersion,
+			"update_available": false,
+		})
+	}
+
+	// Compare versions
+	currentVersion := project.PocketBaseVersion
+	if currentVersion == "" {
+		currentVersion = "unknown"
+	}
+
+	updateAvailable := currentVersion != latestVersion && currentVersion != "unknown"
+
+	return c.JSON(fiber.Map{
+		"current_version":   currentVersion,
+		"latest_version":    latestVersion,
+		"update_available":  updateAvailable,
+		"project_id":        project.ID,
+		"project_name":      project.Name,
+	})
+}
+
+// UpdatePocketBase triggers a PocketBase update by redeploying with the latest version
+func (h *ProjectHandler) UpdatePocketBase(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uint)
+	projectID, err := strconv.ParseUint(c.Params("id"), 10, 32)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Invalid project ID",
+		})
+	}
+
+	var project models.Project
+	if err := h.db.Where("id = ? AND user_id = ?", projectID, userID).First(&project).Error; err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "Project not found",
+		})
+	}
+
+	// Check if project uses PocketBase
+	if project.BaaSType != models.BaaSPocketBase {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "This project does not use PocketBase",
+		})
+	}
+
+	// Fetch latest version
+	latestVersion, err := deployment.FetchLatestPocketBaseVersion()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to fetch latest PocketBase version from GitHub",
+		})
+	}
+
+	// Check if already on latest version
+	if project.PocketBaseVersion == latestVersion {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"error":           "Project is already running the latest PocketBase version",
+			"current_version": project.PocketBaseVersion,
+			"latest_version":  latestVersion,
+		})
+	}
+
+	// Create a new deployment to update PocketBase
+	deployment := models.Deployment{
+		ProjectID: uint(projectID),
+		Status:    models.DeploymentPending,
+		CommitSHA: "pocketbase-update-" + latestVersion,
+		Branch:    project.GitBranch,
+		Message:   fmt.Sprintf("Update PocketBase from %s to %s", project.PocketBaseVersion, latestVersion),
+	}
+
+	if err := h.db.Create(&deployment).Error; err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to create deployment",
+		})
+	}
+
+	// Log the update request
+	log.Printf("PocketBase update requested for project %d: %s → %s",
+		project.ID, project.PocketBaseVersion, latestVersion)
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message":          "PocketBase update initiated",
+		"deployment_id":    deployment.ID,
+		"current_version":  project.PocketBaseVersion,
+		"target_version":   latestVersion,
+		"deployment":       deployment,
 	})
 }
 

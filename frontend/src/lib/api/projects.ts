@@ -146,5 +146,25 @@ export const projectsAPI = {
 		message?: string;
 	}> {
 		return api.post(`/projects/${projectId}/webhook/disable`, {});
+	},
+
+	// PocketBase updates
+	async checkPocketBaseUpdate(projectId: number): Promise<{
+		current_version: string;
+		latest_version: string;
+		update_available: boolean;
+		project_id: number;
+		project_name: string;
+	}> {
+		return api.get(`/projects/${projectId}/pocketbase/check-update`);
+	},
+
+	async updatePocketBase(projectId: number): Promise<{
+		message: string;
+		deployment_id: number;
+		current_version: string;
+		target_version: string;
+	}> {
+		return api.post(`/projects/${projectId}/pocketbase/update`, {});
 	}
 };
