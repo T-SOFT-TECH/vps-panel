@@ -686,6 +686,58 @@
 							</div>
 						{/if}
 					</div>
+
+				<!-- PocketBase Admin Management -->
+				<div class="modern-card p-5 hover-lift transition-all">
+					<div class="flex items-center gap-2 mb-4">
+						<div class="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center">
+							<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+							</svg>
+						</div>
+						<h3 class="text-base font-bold" style="color: rgb(var(--text-primary));">Admin Management</h3>
+					</div>
+
+					<div class="space-y-3">
+						<p class="text-xs" style="color: rgb(var(--text-secondary));">
+							Manage PocketBase administrator accounts and database directly from the panel.
+						</p>
+
+						<div class="space-y-2">
+							<Button
+								onclick={openAdminModal}
+								disabled={creatingAdmin}
+								class="w-full btn-primary"
+								size="sm"
+							>
+								<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+								</svg>
+								Create Admin Account
+							</Button>
+
+							<Button
+								onclick={handleResetDatabase}
+								loading={resettingDatabase}
+								disabled={resettingDatabase}
+								variant="danger"
+								class="w-full"
+								size="sm"
+							>
+								<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+								</svg>
+								{resettingDatabase ? 'Resetting...' : 'Reset Database'}
+							</Button>
+						</div>
+
+						<div class="mt-3 p-3 rounded-lg" style="background-color: rgb(var(--bg-secondary)); border-left: 3px solid rgb(239, 68, 68);">
+							<p class="text-xs" style="color: rgb(var(--text-secondary));">
+								<strong style="color: rgb(var(--text-primary));">Warning:</strong> Resetting the database will permanently delete all data including users, collections, and files.
+							</p>
+						</div>
+					</div>
+				</div>
 				{/if}
 
 				<!-- Environment Variables -->
@@ -891,6 +943,94 @@
 					disabled={envSaving}
 				>
 					{envSaving ? 'Saving...' : (editingEnv ? 'Update' : 'Add')} Variable
+				</Button>
+			</div>
+		</form>
+	</Modal>
+
+	<!-- PocketBase Admin Creation Modal -->
+	<Modal
+		bind:open={adminModalOpen}
+		title="Create PocketBase Admin Account"
+		size="md"
+	>
+		<form onsubmit={(e) => { e.preventDefault(); handleCreateAdmin(); }} class="space-y-4">
+			<Alert variant="info">
+				Create a new administrator account for your PocketBase instance. This is useful if you can't access the admin registration page.
+			</Alert>
+
+			<div>
+				<label for="admin-email" class="block text-sm font-medium mb-2" style="color: rgb(var(--text-primary));">
+					Email Address
+				</label>
+				<input
+					id="admin-email"
+					type="email"
+					bind:value={adminForm.email}
+					placeholder="admin@example.com"
+					class="modern-input w-full"
+					required
+					autocomplete="email"
+				/>
+			</div>
+
+			<div>
+				<label for="admin-password" class="block text-sm font-medium mb-2" style="color: rgb(var(--text-primary));">
+					Password
+				</label>
+				<input
+					id="admin-password"
+					type="password"
+					bind:value={adminForm.password}
+					placeholder="Minimum 8 characters"
+					class="modern-input w-full"
+					required
+					minlength="8"
+					autocomplete="new-password"
+				/>
+				<p class="mt-1 text-xs" style="color: rgb(var(--text-secondary));">
+					Must be at least 8 characters long
+				</p>
+			</div>
+
+			<div>
+				<label for="admin-password-confirm" class="block text-sm font-medium mb-2" style="color: rgb(var(--text-primary));">
+					Confirm Password
+				</label>
+				<input
+					id="admin-password-confirm"
+					type="password"
+					bind:value={adminForm.password_confirm}
+					placeholder="Re-enter password"
+					class="modern-input w-full"
+					required
+					minlength="8"
+					autocomplete="new-password"
+				/>
+			</div>
+
+			{#if error && adminModalOpen}
+				<Alert variant="error">
+					{error}
+				</Alert>
+			{/if}
+
+			<div class="flex justify-end gap-3 pt-2">
+				<Button
+					variant="ghost"
+					type="button"
+					onclick={() => { adminModalOpen = false; error = ''; }}
+					disabled={creatingAdmin}
+				>
+					Cancel
+				</Button>
+				<Button
+					type="submit"
+					loading={creatingAdmin}
+					disabled={creatingAdmin}
+					class="btn-primary"
+				>
+					{creatingAdmin ? 'Creating...' : 'Create Admin Account'}
 				</Button>
 			</div>
 		</form>
