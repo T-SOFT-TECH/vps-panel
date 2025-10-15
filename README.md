@@ -93,7 +93,7 @@ The automated installation script will:
 
 ```bash
 # Clone the repository
-git clone [https://github.com/yourusername/vps-panel](https://github.com/T-SOFT-TECH/vps-panel).git
+git clone https://github.com/T-SOFT-TECH/vps-panel.git
 cd vps-panel
 
 sudo chmod +x install.sh
