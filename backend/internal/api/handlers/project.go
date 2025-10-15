@@ -1,12 +1,12 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -240,7 +240,7 @@ func (h *ProjectHandler) Create(c *fiber.Ctx) error {
 				provider := &providers[i]
 				if (strings.Contains(project.GitURL, "github.com") && provider.Type == "github") ||
 					(strings.Contains(project.GitURL, "gitlab.com") && provider.Type == "gitlab") ||
-					(provider.Type == "gitea" && strings.Contains(project.GitURL, provider.ServerURL)) {
+					(provider.Type == "gitea" && strings.Contains(project.GitURL, provider.URL)) {
 					matchingProvider = provider
 					break
 				}
@@ -914,11 +914,11 @@ func (h *ProjectHandler) UpdatePocketBase(c *fiber.Ctx) error {
 
 	// Create a new deployment to update PocketBase
 	deployment := models.Deployment{
-		ProjectID: uint(projectID),
-		Status:    models.DeploymentPending,
-		CommitSHA: "pocketbase-update-" + latestVersion,
-		Branch:    project.GitBranch,
-		Message:   fmt.Sprintf("Update PocketBase from %s to %s", project.PocketBaseVersion, latestVersion),
+		ProjectID:     uint(projectID),
+		Status:        models.DeploymentPending,
+		CommitHash:    "pocketbase-update-" + latestVersion,
+		Branch:        project.GitBranch,
+		CommitMessage: fmt.Sprintf("Update PocketBase from %s to %s", project.PocketBaseVersion, latestVersion),
 	}
 
 	if err := h.db.Create(&deployment).Error; err != nil {
@@ -1012,41 +1012,4 @@ func randomString(length int) string {
 		b[i] = charset[i%len(charset)]
 	}
 	return string(b)
-}
-
-// generateWebhookSecret generates a random secret for webhook verification
-func generateWebhookSecret() string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	secret := make([]byte, 32)
-	for i := range secret {
-		secret[i] = charset[int(time.Now().UnixNano())%len(charset)]
-	}
-	return string(secret)
-}
-
-// getBaseURL automatically detects the base URL from the request
-// This eliminates the need for manual PANEL_URL configuration
-func getBaseURL(c *fiber.Ctx, cfg *config.Config) string {
-	// If PANEL_URL is explicitly configured, use it
-	if cfg.PanelURL != "" {
-		return cfg.PanelURL
-	}
-
-	// Auto-detect from request headers
-	scheme := "http"
-	if c.Get("X-Forwarded-Proto") == "https" || c.Protocol() == "https" {
-		scheme = "https"
-	}
-
-	host := c.Get("Host")
-	if host == "" {
-		host = c.Hostname()
-	}
-
-	if host == "" {
-		// Fallback to localhost
-		return "http://localhost:" + cfg.Port
-	}
-
-	return scheme + "://" + host
 }
