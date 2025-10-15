@@ -257,8 +257,23 @@ networks:
 func (s *DeploymentService) ensurePocketBaseStructure(workDir string, deploymentID uint) error {
 	s.logBuild(deploymentID, "Setting up PocketBase project structure...", "info")
 
-	// Create pb_data directory if it doesn't exist
+	// IMPORTANT: Remove any pb_data that came from the Git repository
+	// Developers often accidentally commit their development database to Git
+	// This ensures we always start with a fresh PocketBase instance
 	pbDataDir := filepath.Join(workDir, "pb_data")
+	pbDataDB := filepath.Join(pbDataDir, "data.db")
+
+	if _, err := os.Stat(pbDataDB); err == nil {
+		s.logBuild(deploymentID, "⚠️  Found pb_data/data.db from Git repository", "warning")
+		s.logBuild(deploymentID, "   Removing development database to ensure fresh deployment", "info")
+		if err := os.RemoveAll(pbDataDir); err != nil {
+			s.logBuild(deploymentID, fmt.Sprintf("Warning: Could not remove pb_data: %v", err), "warning")
+		} else {
+			s.logBuild(deploymentID, "✓ Removed development database from repository", "info")
+		}
+	}
+
+	// Create fresh pb_data directory
 	if err := os.MkdirAll(pbDataDir, 0755); err != nil {
 		return fmt.Errorf("failed to create pb_data directory: %w", err)
 	}
