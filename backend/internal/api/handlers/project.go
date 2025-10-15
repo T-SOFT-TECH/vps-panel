@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,15 +15,21 @@ import (
 	"github.com/vps-panel/backend/internal/services/caddy"
 	"github.com/vps-panel/backend/internal/services/detector"
 	"github.com/vps-panel/backend/internal/services/git"
+	"github.com/vps-panel/backend/internal/services/webhook"
 )
 
 type ProjectHandler struct {
-	db  *gorm.DB
-	cfg *config.Config
+	db             *gorm.DB
+	cfg            *config.Config
+	webhookService *webhook.Service
 }
 
 func NewProjectHandler(db *gorm.DB, cfg *config.Config) *ProjectHandler {
-	return &ProjectHandler{db: db, cfg: cfg}
+	return &ProjectHandler{
+		db:             db,
+		cfg:            cfg,
+		webhookService: webhook.NewService(),
+	}
 }
 
 // resolveGitCredentials resolves OAuth placeholder tokens to actual credentials

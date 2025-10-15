@@ -12,7 +12,7 @@ import (
 // generatePocketBaseDockerfile generates a robust Dockerfile that downloads official PocketBase binary from GitHub
 func (s *DeploymentService) generatePocketBaseDockerfile(pbVersion string) string {
 	if pbVersion == "" {
-		pbVersion = "0.22.20" // Latest stable version - can be made dynamic via GitHub API
+		pbVersion = "0.30.0" // Latest stable version - can be made dynamic via GitHub API
 	}
 
 	return fmt.Sprintf(`# PocketBase Backend - Built from Official GitHub Binary
@@ -85,7 +85,7 @@ func (s *DeploymentService) generateDockerCompose(project *models.Project, deplo
 	projectID := project.ID
 
 	// Get PocketBase version from project or use default
-	pbVersion := "0.22.20"
+	pbVersion := "0.30.0"
 
 	// Generate unique container names
 	frontendContainerName := fmt.Sprintf("vps-panel-%s-frontend-%d", projectName, projectID)

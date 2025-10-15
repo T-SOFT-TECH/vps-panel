@@ -43,7 +43,9 @@
       "Bash(awk:*)",
       "Bash(cat:*)",
       "Bash(cd:*)",
-      "Bash(netstat:*)"
+      "Bash(netstat:*)",
+      "Bash(curl -v -X POST https://panel.tsoft-tech.dev/api/v1/webhooks/github/1 -H 'Content-Type: application/json' -d '{\"\"\"\"ref\"\"\"\":\"\"\"\"refs/heads/main\"\"\"\"}')",
+      "Bash(curl -X POST https://panel.tsoft-tech.dev/api/v1/webhooks/github/1 -H 'Content-Type: application/json' -d '{\"\"\"\"ref\"\"\"\":\"\"\"\"refs/heads/main\"\"\"\"}')"
     ],
     "deny": [],
     "ask": []
