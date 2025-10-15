@@ -44,8 +44,9 @@ type Project struct {
 	RootDirectory string `json:"root_directory,omitempty"` // Subdirectory for monorepos (e.g., "frontend")
 
 	// Framework & Backend
-	Framework FrameworkType `gorm:"type:varchar(50)" json:"framework"`
-	BaaSType  BaaSType      `gorm:"type:varchar(50)" json:"baas_type"`
+	Framework        FrameworkType `gorm:"type:varchar(50)" json:"framework"`
+	BaaSType         BaaSType      `gorm:"type:varchar(50)" json:"baas_type"`
+	PocketBaseVersion string       `json:"pocketbase_version,omitempty"` // Current PocketBase version (for BaaS updates)
 
 	// Build configuration
 	BuildCommand   string `json:"build_command"`    // npm run build

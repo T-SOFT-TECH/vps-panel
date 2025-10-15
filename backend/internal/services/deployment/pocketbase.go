@@ -387,6 +387,13 @@ func (s *DeploymentService) generatePocketBaseDeploymentFiles(workDir string, pr
 	}
 
 	s.logBuild(deploymentID, "All PocketBase deployment files generated successfully", "info")
+
+	// Save the PocketBase version to the project for update tracking
+	project.PocketBaseVersion = pbVersion
+	if err := s.db.Save(project).Error; err != nil {
+		s.logBuild(deploymentID, fmt.Sprintf("Warning: Failed to save PocketBase version: %v", err), "warning")
+	}
+
 	return nil
 }
 
