@@ -2,17 +2,87 @@ package deployment
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"log"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/vps-panel/backend/internal/models"
 )
 
+// GitHubRelease represents a GitHub release API response
+type GitHubRelease struct {
+	TagName string `json:"tag_name"`
+	Name    string `json:"name"`
+}
+
+// fetchLatestPocketBaseVersion fetches the latest PocketBase version from GitHub API
+func fetchLatestPocketBaseVersion() (string, error) {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", "https://api.github.com/repos/pocketbase/pocketbase/releases/latest", nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Add User-Agent header (GitHub API requires it)
+	req.Header.Set("User-Agent", "VPS-Panel")
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch from GitHub: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read response: %w", err)
+	}
+
+	var release GitHubRelease
+	if err := json.Unmarshal(body, &release); err != nil {
+		return "", fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	// Remove 'v' prefix if present (e.g., "v0.30.0" -> "0.30.0")
+	version := strings.TrimPrefix(release.TagName, "v")
+
+	if version == "" {
+		return "", fmt.Errorf("empty version received from GitHub")
+	}
+
+	return version, nil
+}
+
+// getPocketBaseVersion gets the latest PocketBase version or falls back to a known stable version
+func getPocketBaseVersion() string {
+	version, err := fetchLatestPocketBaseVersion()
+	if err != nil {
+		log.Printf("Warning: Failed to fetch latest PocketBase version from GitHub: %v", err)
+		log.Printf("Falling back to known stable version 0.30.0")
+		return "0.30.0" // Fallback to known stable version
+	}
+
+	log.Printf("Using latest PocketBase version: %s", version)
+	return version
+}
+
 // generatePocketBaseDockerfile generates a robust Dockerfile that downloads official PocketBase binary from GitHub
 func (s *DeploymentService) generatePocketBaseDockerfile(pbVersion string) string {
 	if pbVersion == "" {
-		pbVersion = "0.30.0" // Latest stable version - can be made dynamic via GitHub API
+		pbVersion = getPocketBaseVersion() // Fetch latest version from GitHub
 	}
 
 	return fmt.Sprintf(`# PocketBase Backend - Built from Official GitHub Binary
@@ -84,8 +154,8 @@ func (s *DeploymentService) generateDockerCompose(project *models.Project, deplo
 	projectName := sanitizeProjectName(project.Name)
 	projectID := project.ID
 
-	// Get PocketBase version from project or use default
-	pbVersion := "0.30.0"
+	// Get latest PocketBase version from GitHub
+	pbVersion := getPocketBaseVersion()
 
 	// Generate unique container names
 	frontendContainerName := fmt.Sprintf("vps-panel-%s-frontend-%d", projectName, projectID)
@@ -279,8 +349,12 @@ func (s *DeploymentService) generatePocketBaseDeploymentFiles(workDir string, pr
 	}
 
 	// 2. Generate PocketBase Dockerfile
+	s.logBuild(deploymentID, "Fetching latest PocketBase version from GitHub...", "info")
+	pbVersion := getPocketBaseVersion()
+	s.logBuild(deploymentID, fmt.Sprintf("Using PocketBase version: %s", pbVersion), "info")
+
 	s.logBuild(deploymentID, "Creating PocketBase Dockerfile from official GitHub binary...", "info")
-	pocketbaseDockerfile := s.generatePocketBaseDockerfile("")
+	pocketbaseDockerfile := s.generatePocketBaseDockerfile(pbVersion)
 	pocketbaseDockerfilePath := filepath.Join(workDir, "Dockerfile.pocketbase")
 	if err := os.WriteFile(pocketbaseDockerfilePath, []byte(pocketbaseDockerfile), 0644); err != nil {
 		return fmt.Errorf("failed to write PocketBase Dockerfile: %w", err)
