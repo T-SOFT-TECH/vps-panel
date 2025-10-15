@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/vps-panel/backend/internal/services/caddy"
 	"github.com/vps-panel/backend/internal/services/deployment"
 	"github.com/vps-panel/backend/internal/services/detector"
+	"github.com/vps-panel/backend/internal/services/docker"
 	"github.com/vps-panel/backend/internal/services/git"
 	"github.com/vps-panel/backend/internal/services/webhook"
 )
@@ -325,14 +327,82 @@ func (h *ProjectHandler) Delete(c *fiber.Ctx) error {
 		})
 	}
 
-	// TODO: Clean up deployments, containers, and Caddy config
+	// Step 1: Stop and remove Docker containers
+	ctx := context.Background()
+	dockerService, err := docker.NewDockerService()
+	if err == nil {
+		defer dockerService.Close()
 
+		projectName := fmt.Sprintf("vps-panel-project-%d", project.ID)
+		workDir := filepath.Join(h.cfg.ProjectsDir, fmt.Sprintf("project-%d", project.ID))
+
+		// Stop docker-compose containers if they exist
+		if err := dockerService.ComposeDown(ctx, workDir, projectName); err != nil {
+			log.Printf("Warning: failed to stop docker containers for project %d: %v", project.ID, err)
+		} else {
+			log.Printf("✓ Stopped Docker containers for project %d", project.ID)
+		}
+
+		// Also try to stop individual container (for non-compose deployments)
+		containerName := fmt.Sprintf("vps-panel-%s-%d", project.Name, project.ID)
+		if err := dockerService.RemoveContainer(ctx, containerName); err != nil {
+			log.Printf("Note: individual container cleanup for project %d: %v", project.ID, err)
+		}
+	}
+
+	// Step 2: Delete project directory
+	projectDir := filepath.Join(h.cfg.ProjectsDir, fmt.Sprintf("project-%d", project.ID))
+	if err := os.RemoveAll(projectDir); err != nil {
+		log.Printf("Warning: failed to delete project directory %s: %v", projectDir, err)
+	} else {
+		log.Printf("✓ Deleted project directory: %s", projectDir)
+	}
+
+	// Step 3: Remove Caddy configuration
+	caddyService := caddy.NewCaddyService(h.cfg.CaddyConfigPath, h.cfg.CaddyReloadCmd)
+	caddyConfigFile := filepath.Join(h.cfg.CaddyConfigPath, fmt.Sprintf("project-%d.caddy", project.ID))
+	if err := os.Remove(caddyConfigFile); err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("Warning: failed to delete Caddy config: %v", err)
+		}
+	} else {
+		log.Printf("✓ Deleted Caddy configuration")
+		// Reload Caddy to apply changes
+		if err := caddyService.Reload(); err != nil {
+			log.Printf("Warning: failed to reload Caddy: %v", err)
+		}
+	}
+
+	// Step 4: Delete webhook from Git provider if auto-deploy was enabled
+	if project.AutoDeploy && project.WebhookSecret != "" {
+		// Find the connected Git provider
+		var providers []models.GitProvider
+		if err := h.db.Where("user_id = ?", userID).Find(&providers).Error; err == nil {
+			for i := range providers {
+				provider := &providers[i]
+				if (strings.Contains(project.GitURL, "github.com") && provider.Type == "github") ||
+					(strings.Contains(project.GitURL, "gitlab.com") && provider.Type == "gitlab") ||
+					(provider.Type == "gitea" && strings.Contains(project.GitURL, provider.URL)) {
+					// Try to delete the webhook
+					if err := h.webhookService.DeleteWebhook(&project, provider); err != nil {
+						log.Printf("Warning: failed to delete webhook for project %d: %v", project.ID, err)
+					} else {
+						log.Printf("✓ Deleted webhook from %s", provider.Type)
+					}
+					break
+				}
+			}
+		}
+	}
+
+	// Step 5: Delete from database (cascades to deployments, domains, environments)
 	if err := h.db.Delete(&project).Error; err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to delete project",
+			"error": "Failed to delete project from database",
 		})
 	}
 
+	log.Printf("✓ Successfully deleted project %d: %s", project.ID, project.Name)
 	return c.SendStatus(fiber.StatusNoContent)
 }
 

@@ -475,17 +475,43 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 	}
 
 	// Step 5: Display deployment information
+	var adminURL string
 	for _, domain := range project.Domains {
 		if domain.IsActive {
 			protocol := "https"
 			if !domain.SSLEnabled {
 				protocol = "http"
 			}
+			adminURL = fmt.Sprintf("%s://%s/_", protocol, domain.Domain)
 			s.logBuild(deployment.ID, fmt.Sprintf("🚀 Frontend: %s://%s", protocol, domain.Domain), "info")
 			s.logBuild(deployment.ID, fmt.Sprintf("🗄️  PocketBase API: %s://%s/api/*", protocol, domain.Domain), "info")
-			s.logBuild(deployment.ID, fmt.Sprintf("🔧 PocketBase Admin: %s://%s/_", protocol, domain.Domain), "info")
+			s.logBuild(deployment.ID, fmt.Sprintf("🔧 PocketBase Admin: %s", adminURL), "info")
 			break
 		}
+	}
+
+	// Step 6: Check if this is first-time setup and show admin registration instructions
+	pbDataPath := filepath.Join(workDir, "pb_data", "data.db")
+	if _, err := os.Stat(pbDataPath); os.IsNotExist(err) {
+		s.logBuild(deployment.ID, "", "info")
+		s.logBuild(deployment.ID, "╔════════════════════════════════════════════════════════╗", "info")
+		s.logBuild(deployment.ID, "║        🎉 FIRST-TIME POCKETBASE SETUP REQUIRED        ║", "info")
+		s.logBuild(deployment.ID, "╚════════════════════════════════════════════════════════╝", "info")
+		s.logBuild(deployment.ID, "", "info")
+		s.logBuild(deployment.ID, "📋 Next Steps:", "info")
+		s.logBuild(deployment.ID, fmt.Sprintf("   1. Visit: %s", adminURL), "info")
+		s.logBuild(deployment.ID, "   2. Create your admin account (email + password)", "info")
+		s.logBuild(deployment.ID, "   3. Start building your application!", "info")
+		s.logBuild(deployment.ID, "", "info")
+		s.logBuild(deployment.ID, "⚠️  IMPORTANT: This is a one-time setup. After creating", "info")
+		s.logBuild(deployment.ID, "   your admin account, you'll use these credentials to", "info")
+		s.logBuild(deployment.ID, "   login to the admin dashboard.", "info")
+		s.logBuild(deployment.ID, "", "info")
+	} else {
+		s.logBuild(deployment.ID, "", "info")
+		s.logBuild(deployment.ID, "✓ PocketBase database found - using existing data", "info")
+		s.logBuild(deployment.ID, fmt.Sprintf("  Login at: %s", adminURL), "info")
+		s.logBuild(deployment.ID, "", "info")
 	}
 
 	return nil
