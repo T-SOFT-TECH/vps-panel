@@ -1014,7 +1014,9 @@ func (h *ProjectHandler) UpdatePocketBase(c *fiber.Ctx) error {
 	})
 }
 
-// CreatePocketBaseAdmin creates a new admin account in PocketBase via API
+// CreatePocketBaseAdmin creates a new admin account in PocketBase using CLI command
+// PocketBase 0.30.2+ changed first-time setup to require a special JWT token URL
+// The better solution is to use the CLI: ./pocketbase superuser upsert EMAIL PASS
 func (h *ProjectHandler) CreatePocketBaseAdmin(c *fiber.Ctx) error {
 	userID := c.Locals("userID").(uint)
 	projectID, err := strconv.ParseUint(c.Params("id"), 10, 32)
@@ -1077,46 +1079,55 @@ func (h *ProjectHandler) CreatePocketBaseAdmin(c *fiber.Ctx) error {
 		})
 	}
 
-	// Create admin via PocketBase API
-	adminData := map[string]interface{}{
-		"email":           req.Email,
-		"password":        req.Password,
-		"passwordConfirm": req.PasswordConfirm,
-	}
+	// Get PocketBase container name
+	projectName := sanitizeProjectName(project.Name)
+	containerName := fmt.Sprintf("vps-panel-%s-pocketbase-%d", projectName, project.ID)
 
-	jsonData, err := json.Marshal(adminData)
+	// Create admin via Docker exec with PocketBase CLI
+	ctx := context.Background()
+	dockerService, err := docker.NewDockerService()
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to prepare admin data",
+			"error": "Failed to connect to Docker",
 		})
 	}
+	defer dockerService.Close()
 
-	// Make request to PocketBase API
-	apiURL := fmt.Sprintf("%s/api/admins", pocketbaseURL)
-	resp, err := http.Post(apiURL, "application/json", strings.NewReader(string(jsonData)))
+	// Run: /pb/pocketbase superuser upsert EMAIL PASSWORD
+	cmd := []string{"/pb/pocketbase", "superuser", "upsert", req.Email, req.Password}
+	output, err := dockerService.ExecContainer(ctx, containerName, cmd)
 	if err != nil {
+		log.Printf("Failed to create PocketBase admin for project %d: %v", project.ID, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to connect to PocketBase: " + err.Error(),
-		})
-	}
-	defer resp.Body.Close()
-
-	body, _ := io.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return c.Status(resp.StatusCode).JSON(fiber.Map{
 			"error":   "Failed to create admin account",
-			"details": string(body),
+			"details": err.Error(),
 		})
 	}
 
 	log.Printf("✓ Created PocketBase admin for project %d: %s", project.ID, req.Email)
+	log.Printf("PocketBase CLI output: %s", output)
 
 	return c.JSON(fiber.Map{
 		"message": "Admin account created successfully",
 		"email":   req.Email,
 		"url":     fmt.Sprintf("%s/_", pocketbaseURL),
 	})
+}
+
+// sanitizeProjectName sanitizes project name for use in container names
+func sanitizeProjectName(name string) string {
+	// Convert to lowercase and replace spaces/special chars with hyphens
+	result := ""
+	for _, char := range name {
+		if (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') {
+			result += string(char)
+		} else if char >= 'A' && char <= 'Z' {
+			result += string(char + 32) // Convert to lowercase
+		} else if char == ' ' || char == '_' {
+			result += "-"
+		}
+	}
+	return result
 }
 
 // ResetPocketBaseDatabase completely resets the PocketBase database

@@ -234,6 +234,47 @@ func (s *DockerService) Close() error {
 	return s.client.Close()
 }
 
+// ExecContainer executes a command in a running container and returns the output
+func (s *DockerService) ExecContainer(ctx context.Context, containerName string, cmd []string) (string, error) {
+	// Create exec configuration
+	execConfig := types.ExecConfig{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+	}
+
+	// Create the exec instance
+	execID, err := s.client.ContainerExecCreate(ctx, containerName, execConfig)
+	if err != nil {
+		return "", fmt.Errorf("failed to create exec instance: %w", err)
+	}
+
+	// Attach to the exec instance
+	resp, err := s.client.ContainerExecAttach(ctx, execID.ID, types.ExecStartCheck{})
+	if err != nil {
+		return "", fmt.Errorf("failed to attach to exec instance: %w", err)
+	}
+	defer resp.Close()
+
+	// Read the output
+	output, err := io.ReadAll(resp.Reader)
+	if err != nil {
+		return "", fmt.Errorf("failed to read exec output: %w", err)
+	}
+
+	// Check if the exec command succeeded
+	inspectResp, err := s.client.ContainerExecInspect(ctx, execID.ID)
+	if err != nil {
+		return string(output), fmt.Errorf("failed to inspect exec instance: %w", err)
+	}
+
+	if inspectResp.ExitCode != 0 {
+		return string(output), fmt.Errorf("command exited with code %d: %s", inspectResp.ExitCode, string(output))
+	}
+
+	return string(output), nil
+}
+
 // ComposeDown stops and removes containers created by docker compose
 func (s *DockerService) ComposeDown(ctx context.Context, workDir string, projectName string) error {
 	cmd := fmt.Sprintf("docker compose -f docker-compose.yml -p %s down --remove-orphans", projectName)
