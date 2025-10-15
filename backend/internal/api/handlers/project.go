@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
@@ -222,6 +223,38 @@ func (h *ProjectHandler) Create(c *fiber.Ctx) error {
 			// Don't fail project creation if domain creation fails, just log it
 			// The user can add the domain later
 			println("Warning: failed to create custom domain:", err.Error())
+		}
+	}
+
+	// Automatically create webhook in Git provider if auto-deploy is enabled
+	// This makes the experience seamless like Vercel - no manual setup needed!
+	if req.AutoDeploy && project.WebhookSecret != "" {
+		// Find the connected Git provider for this project
+		var providers []models.GitProvider
+		if err := h.db.Where("user_id = ?", userID).Find(&providers).Error; err == nil {
+			var matchingProvider *models.GitProvider
+
+			// Match provider by Git URL
+			for i := range providers {
+				provider := &providers[i]
+				if (strings.Contains(project.GitURL, "github.com") && provider.Type == "github") ||
+					(strings.Contains(project.GitURL, "gitlab.com") && provider.Type == "gitlab") ||
+					(provider.Type == "gitea" && strings.Contains(project.GitURL, provider.ServerURL)) {
+					matchingProvider = provider
+					break
+				}
+			}
+
+			// Auto-create webhook if we found a matching provider
+			if matchingProvider != nil {
+				baseURL := getBaseURL(c, h.cfg)
+				if err := h.webhookService.CreateWebhook(&project, matchingProvider, baseURL); err != nil {
+					log.Printf("Auto-webhook creation failed for project %d: %v (project created successfully)", project.ID, err)
+					// Don't fail project creation - user can enable webhook manually later
+				} else {
+					log.Printf("✓ Automatically created webhook for new project %d via %s", project.ID, matchingProvider.Type)
+				}
+			}
 		}
 	}
 
@@ -858,4 +891,41 @@ func randomString(length int) string {
 		b[i] = charset[i%len(charset)]
 	}
 	return string(b)
+}
+
+// generateWebhookSecret generates a random secret for webhook verification
+func generateWebhookSecret() string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	secret := make([]byte, 32)
+	for i := range secret {
+		secret[i] = charset[int(time.Now().UnixNano())%len(charset)]
+	}
+	return string(secret)
+}
+
+// getBaseURL automatically detects the base URL from the request
+// This eliminates the need for manual PANEL_URL configuration
+func getBaseURL(c *fiber.Ctx, cfg *config.Config) string {
+	// If PANEL_URL is explicitly configured, use it
+	if cfg.PanelURL != "" {
+		return cfg.PanelURL
+	}
+
+	// Auto-detect from request headers
+	scheme := "http"
+	if c.Get("X-Forwarded-Proto") == "https" || c.Protocol() == "https" {
+		scheme = "https"
+	}
+
+	host := c.Get("Host")
+	if host == "" {
+		host = c.Hostname()
+	}
+
+	if host == "" {
+		// Fallback to localhost
+		return "http://localhost:" + cfg.Port
+	}
+
+	return scheme + "://" + host
 }
