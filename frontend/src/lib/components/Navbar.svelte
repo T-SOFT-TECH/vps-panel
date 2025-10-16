@@ -25,7 +25,8 @@
 	}
 </script>
 
-<nav class="sticky top-0 z-50 transition-all duration-300 {scrolled ? 'glass-pro shadow-2xl' : 'glass-card shadow-lg'} border-b">
+<nav class="sticky top-0 z-50 transition-all duration-300 {scrolled ? 'shadow-2xl' : 'glass-card shadow-lg'} border-b"
+     style="{scrolled ? 'background-color: rgb(var(--bg-secondary)); backdrop-filter: blur(12px);' : ''}">
 	<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 		<div class="flex justify-between h-16">
 			<!-- Logo -->

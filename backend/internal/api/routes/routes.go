@@ -7,13 +7,14 @@ import (
 	"github.com/vps-panel/backend/internal/api/handlers"
 	"github.com/vps-panel/backend/internal/api/middleware"
 	"github.com/vps-panel/backend/internal/config"
+	"github.com/vps-panel/backend/internal/services/websocket"
 )
 
-func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) error {
+func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, wsHub *websocket.Hub) error {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db, cfg)
 	projectHandler := handlers.NewProjectHandler(db, cfg)
-	deploymentHandler := handlers.NewDeploymentHandler(db, cfg)
+	deploymentHandler := handlers.NewDeploymentHandler(db, cfg, wsHub)
 	webhookHandler, err := handlers.NewWebhookHandler(db, cfg)
 	if err != nil {
 		return err
@@ -43,6 +44,9 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config) error {
 
 	// Protected routes (require authentication)
 	protected := api.Group("", middleware.AuthMiddleware(cfg.JWTSecret))
+
+	// WebSocket route (protected - requires authentication)
+	protected.Get("/ws", wsHub.HandleWebSocket)
 
 	// OAuth routes (protected - user must be logged in to connect accounts)
 	oauth := protected.Group("/auth/oauth")

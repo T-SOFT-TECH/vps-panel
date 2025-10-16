@@ -21,6 +21,7 @@ import (
 	"github.com/vps-panel/backend/internal/services/caddy"
 	"github.com/vps-panel/backend/internal/services/docker"
 	"github.com/vps-panel/backend/internal/services/git"
+	"github.com/vps-panel/backend/internal/services/websocket"
 )
 
 type DeploymentService struct {
@@ -29,9 +30,10 @@ type DeploymentService struct {
 	gitService    *git.GitService
 	dockerService *docker.DockerService
 	caddyService  *caddy.CaddyService
+	wsHub         *websocket.Hub
 }
 
-func NewDeploymentService(db *gorm.DB, cfg *config.Config) (*DeploymentService, error) {
+func NewDeploymentService(db *gorm.DB, cfg *config.Config, wsHub *websocket.Hub) (*DeploymentService, error) {
 	dockerService, err := docker.NewDockerService()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker service: %w", err)
@@ -43,6 +45,7 @@ func NewDeploymentService(db *gorm.DB, cfg *config.Config) (*DeploymentService, 
 		gitService:    git.NewGitService(cfg.ProjectsDir),
 		dockerService: dockerService,
 		caddyService:  caddy.NewCaddyService(cfg.CaddyConfigPath, cfg.CaddyReloadCmd),
+		wsHub:         wsHub,
 	}, nil
 }
 
@@ -60,6 +63,11 @@ func (s *DeploymentService) Deploy(deploymentID uint) error {
 	deployment.Status = models.DeploymentBuilding
 	s.db.Save(&deployment)
 
+	// Broadcast status update via WebSocket
+	if s.wsHub != nil {
+		s.wsHub.BroadcastDeploymentStatus(deployment.ID, project.ID, string(models.DeploymentBuilding), "")
+	}
+
 	// Execute deployment steps
 	ctx := context.Background()
 	startTime := time.Now()
@@ -73,6 +81,11 @@ func (s *DeploymentService) Deploy(deploymentID uint) error {
 		deployment.Duration = int(time.Since(startTime).Seconds())
 		s.db.Save(&deployment)
 
+		// Broadcast failure via WebSocket
+		if s.wsHub != nil {
+			s.wsHub.BroadcastDeploymentStatus(deployment.ID, project.ID, string(models.DeploymentFailed), err.Error())
+		}
+
 		s.logBuild(deployment.ID, fmt.Sprintf("Deployment failed: %v", err), "error")
 		return err
 	}
@@ -83,6 +96,11 @@ func (s *DeploymentService) Deploy(deploymentID uint) error {
 	deployment.CompletedAt = &now
 	deployment.Duration = int(time.Since(startTime).Seconds())
 	s.db.Save(&deployment)
+
+	// Broadcast success via WebSocket
+	if s.wsHub != nil {
+		s.wsHub.BroadcastDeploymentStatus(deployment.ID, project.ID, string(models.DeploymentSuccess), "")
+	}
 
 	// Update project status
 	project.Status = "active"
@@ -781,6 +799,15 @@ func (s *DeploymentService) logBuild(deploymentID uint, message, logType string)
 		LogType:      logType,
 	}
 	s.db.Create(&buildLog)
+
+	// Broadcast build log via WebSocket
+	if s.wsHub != nil {
+		// Get the project ID for this deployment
+		var deployment models.Deployment
+		if err := s.db.Select("project_id").First(&deployment, deploymentID).Error; err == nil {
+			s.wsHub.BroadcastBuildLog(deploymentID, deployment.ProjectID, message, logType, buildLog.CreatedAt.Format(time.RFC3339))
+		}
+	}
 }
 
 // isPortAvailable checks if a port is available for binding

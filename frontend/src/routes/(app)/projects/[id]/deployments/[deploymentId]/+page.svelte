@@ -2,6 +2,8 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { page } from '$app/stores';
 	import { deploymentsAPI } from '$lib/api/deployments';
+	import { websocketStore } from '$lib/stores/websocket.svelte';
+	import type { WebSocketMessage, DeploymentStatusPayload, BuildLogPayload } from '$lib/stores/websocket.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Badge from '$lib/components/Badge.svelte';
@@ -14,24 +16,26 @@
 	let deployment = $state<Deployment | null>(null);
 	let logs = $state<BuildLog[]>([]);
 	let loading = $state(true);
-	let autoRefresh: ReturnType<typeof setInterval> | null = null;
+	let wsUnsubscribe: (() => void) | null = null;
+	let logsContainer: HTMLDivElement;
 
 	onMount(async () => {
 		await loadDeployment();
 		await loadLogs();
 
-		// Auto-refresh for active deployments
-		autoRefresh = setInterval(async () => {
-			if (deployment && ['pending', 'building', 'deploying'].includes(deployment.status)) {
-				await loadDeployment();
-				await loadLogs();
-			}
-		}, 5000);
+		// Subscribe to this project's WebSocket events
+		websocketStore.subscribeToProject(projectId);
+
+		// Subscribe to WebSocket messages
+		wsUnsubscribe = websocketStore.subscribe((message: WebSocketMessage) => {
+			handleWebSocketMessage(message);
+		});
 	});
 
 	onDestroy(() => {
-		if (autoRefresh) {
-			clearInterval(autoRefresh);
+		// Unsubscribe from WebSocket messages
+		if (wsUnsubscribe) {
+			wsUnsubscribe();
 		}
 	});
 
@@ -51,6 +55,48 @@
 			logs = logList;
 		} catch (err) {
 			console.error('Failed to load logs:', err);
+		}
+	}
+
+	function handleWebSocketMessage(message: WebSocketMessage) {
+		// Only handle messages for this deployment
+		switch (message.type) {
+			case 'deployment_status': {
+				const payload = message.payload as DeploymentStatusPayload;
+				if (payload.deploymentId === deploymentId) {
+					// Update deployment status in real-time
+					if (deployment) {
+						deployment = {
+							...deployment,
+							status: payload.status,
+							error_message: payload.error || deployment.error_message
+						};
+					}
+				}
+				break;
+			}
+			case 'build_log': {
+				const payload = message.payload as BuildLogPayload;
+				if (payload.deploymentId === deploymentId) {
+					// Append new log in real-time
+					const newLog: BuildLog = {
+						id: Date.now(), // Temporary ID
+						deployment_id: deploymentId,
+						log: payload.message,
+						log_type: payload.level,
+						created_at: payload.timestamp
+					};
+					logs = [...logs, newLog];
+
+					// Auto-scroll to bottom after new log
+					setTimeout(() => {
+						if (logsContainer) {
+							logsContainer.scrollTop = logsContainer.scrollHeight;
+						}
+					}, 100);
+				}
+				break;
+			}
 		}
 	}
 
@@ -229,7 +275,7 @@
 					No logs available yet
 				</div>
 			{:else}
-				<div class="rounded-lg p-4 overflow-x-auto" style="background-color: rgb(var(--bg-secondary));">
+				<div bind:this={logsContainer} class="rounded-lg p-4 overflow-x-auto max-h-[600px] overflow-y-auto" style="background-color: rgb(var(--bg-secondary));">
 					<div class="font-mono text-sm space-y-1">
 						{#each logs as log}
 							<div class={getLogColor(log.log_type)}>

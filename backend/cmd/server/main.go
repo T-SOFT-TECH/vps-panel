@@ -15,6 +15,7 @@ import (
 	"github.com/vps-panel/backend/internal/config"
 	"github.com/vps-panel/backend/internal/database"
 	"github.com/vps-panel/backend/internal/api/routes"
+	"github.com/vps-panel/backend/internal/services/websocket"
 )
 
 func main() {
@@ -31,6 +32,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
+
+	// Initialize WebSocket hub
+	wsHub := websocket.NewHub()
+	go wsHub.Run()
+	log.Println("✓ WebSocket hub started")
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -60,7 +66,7 @@ func main() {
 	})
 
 	// Setup routes
-	if err := routes.Setup(app, db, cfg); err != nil {
+	if err := routes.Setup(app, db, cfg, wsHub); err != nil {
 		log.Fatalf("Failed to setup routes: %v", err)
 	}
 

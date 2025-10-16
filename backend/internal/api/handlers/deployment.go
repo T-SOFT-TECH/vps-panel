@@ -11,6 +11,7 @@ import (
 	"github.com/vps-panel/backend/internal/config"
 	"github.com/vps-panel/backend/internal/models"
 	"github.com/vps-panel/backend/internal/services/deployment"
+	"github.com/vps-panel/backend/internal/services/websocket"
 )
 
 type DeploymentHandler struct {
@@ -19,8 +20,8 @@ type DeploymentHandler struct {
 	deploymentService *deployment.DeploymentService
 }
 
-func NewDeploymentHandler(db *gorm.DB, cfg *config.Config) *DeploymentHandler {
-	deploymentService, err := deployment.NewDeploymentService(db, cfg)
+func NewDeploymentHandler(db *gorm.DB, cfg *config.Config, wsHub *websocket.Hub) *DeploymentHandler {
+	deploymentService, err := deployment.NewDeploymentService(db, cfg, wsHub)
 	if err != nil {
 		log.Printf("Warning: Failed to initialize deployment service: %v", err)
 		log.Println("Deployments will be queued but not executed")
