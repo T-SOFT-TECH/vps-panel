@@ -3,6 +3,7 @@ package websocket
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 	"sync"
 
 	"github.com/gofiber/fiber/v2"
@@ -213,8 +214,8 @@ func (h *Hub) HandleWebSocket(c *fiber.Ctx) error {
 	// Get optional projectID from query parameter
 	var projectID *uint
 	if projectIDStr := c.Query("projectId"); projectIDStr != "" {
-		var pid uint
-		if _, err := fiber.Scan(projectIDStr, &pid); err == nil {
+		if parsed, err := strconv.ParseUint(projectIDStr, 10, 32); err == nil {
+			pid := uint(parsed)
 			projectID = &pid
 		}
 	}
