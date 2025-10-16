@@ -17,6 +17,7 @@ import (
 	"github.com/vps-panel/backend/internal/models"
 	"github.com/vps-panel/backend/internal/services/deployment"
 	"github.com/vps-panel/backend/internal/services/webhook"
+	"github.com/vps-panel/backend/internal/services/websocket"
 )
 
 type WebhookHandler struct {
@@ -26,8 +27,8 @@ type WebhookHandler struct {
 	webhookService    *webhook.Service
 }
 
-func NewWebhookHandler(db *gorm.DB, cfg *config.Config) (*WebhookHandler, error) {
-	deploymentService, err := deployment.NewDeploymentService(db, cfg)
+func NewWebhookHandler(db *gorm.DB, cfg *config.Config, wsHub *websocket.Hub) (*WebhookHandler, error) {
+	deploymentService, err := deployment.NewDeploymentService(db, cfg, wsHub)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create deployment service: %w", err)
 	}

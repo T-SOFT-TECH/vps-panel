@@ -15,7 +15,7 @@ func Setup(app *fiber.App, db *gorm.DB, cfg *config.Config, wsHub *websocket.Hub
 	authHandler := handlers.NewAuthHandler(db, cfg)
 	projectHandler := handlers.NewProjectHandler(db, cfg)
 	deploymentHandler := handlers.NewDeploymentHandler(db, cfg, wsHub)
-	webhookHandler, err := handlers.NewWebhookHandler(db, cfg)
+	webhookHandler, err := handlers.NewWebhookHandler(db, cfg, wsHub)
 	if err != nil {
 		return err
 	}
