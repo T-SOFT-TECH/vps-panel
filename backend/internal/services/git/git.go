@@ -31,9 +31,18 @@ func (s *GitService) Clone(projectName string, opts CloneOptions) (string, error
 	// Create project directory
 	repoPath := filepath.Join(s.baseDir, projectName)
 
-	// Remove existing directory if it exists
-	if err := os.RemoveAll(repoPath); err != nil {
-		return "", fmt.Errorf("failed to remove existing directory: %w", err)
+	// Check if directory already exists (redeployment scenario)
+	if _, err := os.Stat(repoPath); err == nil {
+		// Directory exists - check if it's a git repository
+		if _, err := git.PlainOpen(repoPath); err == nil {
+			// It's a valid git repo - pull latest changes instead of cloning
+			return repoPath, s.Pull(repoPath, opts)
+		}
+
+		// Directory exists but not a git repo - remove it
+		if err := os.RemoveAll(repoPath); err != nil {
+			return "", fmt.Errorf("failed to remove existing directory: %w", err)
+		}
 	}
 
 	// Ensure parent directory exists
@@ -72,7 +81,7 @@ func (s *GitService) Clone(projectName string, opts CloneOptions) (string, error
 	return repoPath, nil
 }
 
-func (s *GitService) Pull(repoPath string) error {
+func (s *GitService) Pull(repoPath string, opts CloneOptions) error {
 	repo, err := git.PlainOpen(repoPath)
 	if err != nil {
 		return fmt.Errorf("failed to open repository: %w", err)
@@ -83,10 +92,25 @@ func (s *GitService) Pull(repoPath string) error {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	err = worktree.Pull(&git.PullOptions{
+	pullOpts := &git.PullOptions{
 		RemoteName: "origin",
 		Progress:   os.Stdout,
-	})
+	}
+
+	// Add authentication if provided (for private repos)
+	if opts.Username != "" && opts.Token != "" {
+		pullOpts.Auth = &http.BasicAuth{
+			Username: opts.Username,
+			Password: opts.Token,
+		}
+	}
+
+	// Specify branch if provided
+	if opts.Branch != "" {
+		pullOpts.ReferenceName = plumbing.NewBranchReferenceName(opts.Branch)
+	}
+
+	err = worktree.Pull(pullOpts)
 
 	if err != nil && err != git.NoErrAlreadyUpToDate {
 		return fmt.Errorf("failed to pull: %w", err)

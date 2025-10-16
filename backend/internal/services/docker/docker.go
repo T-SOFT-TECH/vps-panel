@@ -362,3 +362,36 @@ func execCommandWithOutput(ctx context.Context, workDir string, command string, 
 
 	return cmd.Wait()
 }
+
+// IsContainerRunning checks if a container with the given name is running
+func (s *DockerService) IsContainerRunning(ctx context.Context, containerName string) bool {
+	container, err := s.client.ContainerInspect(ctx, containerName)
+	if err != nil {
+		return false
+	}
+	return container.State.Running
+}
+
+// ComposeBuildService builds a specific service in docker-compose.yml
+func (s *DockerService) ComposeBuildService(ctx context.Context, workDir string, projectName string, serviceName string, logFn LogCallback) error {
+	cmd := fmt.Sprintf("docker compose -f docker-compose.yml -p %s build --no-cache %s", projectName, serviceName)
+	return execCommandWithOutput(ctx, workDir, cmd, logFn)
+}
+
+// ComposeRestartService restarts a specific service in docker-compose.yml
+func (s *DockerService) ComposeRestartService(ctx context.Context, workDir string, projectName string, serviceName string) error {
+	// First, stop and remove the old container
+	stopCmd := fmt.Sprintf("docker compose -f docker-compose.yml -p %s stop %s", projectName, serviceName)
+	if err := execCommand(ctx, workDir, stopCmd); err != nil {
+		return fmt.Errorf("failed to stop service: %w", err)
+	}
+
+	removeCmd := fmt.Sprintf("docker compose -f docker-compose.yml -p %s rm -f %s", projectName, serviceName)
+	if err := execCommand(ctx, workDir, removeCmd); err != nil {
+		return fmt.Errorf("failed to remove service: %w", err)
+	}
+
+	// Start the service with the new image
+	upCmd := fmt.Sprintf("docker compose -f docker-compose.yml -p %s up -d %s", projectName, serviceName)
+	return execCommand(ctx, workDir, upCmd)
+}

@@ -441,67 +441,105 @@ func generateRandomKey(length int) string {
 func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deployment *models.Deployment, project *models.Project, workDir string) error {
 	s.logBuild(deployment.ID, "Starting multi-container deployment with docker-compose...", "info")
 
-	// Step 1: Stop and remove any existing containers
-	s.logBuild(deployment.ID, "Cleaning up previous deployment...", "info")
 	projectName := fmt.Sprintf("vps-panel-project-%d", project.ID)
 
-	if err := s.dockerService.ComposeDown(ctx, workDir, projectName); err != nil {
-		s.logBuild(deployment.ID, fmt.Sprintf("Note: %v (this is normal for first deployment)", err), "info")
-	}
+	// Check if PocketBase container is already running (redeployment scenario)
+	pocketbaseContainerName := fmt.Sprintf("vps-panel-%s-pocketbase-%d", sanitizeProjectName(project.Name), project.ID)
+	isRedeployment := s.dockerService.IsContainerRunning(ctx, pocketbaseContainerName)
 
-	// Step 2: Build images with docker-compose
-	s.logBuild(deployment.ID, "Building Docker images (frontend + PocketBase)...", "info")
-	s.logBuild(deployment.ID, "→ Downloading official PocketBase binary from GitHub...", "info")
+	if isRedeployment {
+		s.logBuild(deployment.ID, "Redeployment detected - PocketBase backend will remain running", "info")
+		s.logBuild(deployment.ID, "Only frontend will be rebuilt and restarted", "info")
 
-	logCallback := func(message string) {
-		s.logBuild(deployment.ID, message, "info")
-	}
+		// For redeployments: only rebuild and restart frontend
+		logCallback := func(message string) {
+			s.logBuild(deployment.ID, message, "info")
+		}
 
-	if err := s.dockerService.ComposeBuild(ctx, workDir, projectName, logCallback); err != nil {
-		return fmt.Errorf("failed to build images: %w", err)
-	}
+		// Build only the frontend service
+		s.logBuild(deployment.ID, "Building frontend Docker image...", "info")
+		if err := s.dockerService.ComposeBuildService(ctx, workDir, projectName, "frontend", logCallback); err != nil {
+			return fmt.Errorf("failed to build frontend image: %w", err)
+		}
 
-	s.logBuild(deployment.ID, "✓ All images built successfully", "info")
+		s.logBuild(deployment.ID, "✓ Frontend image built successfully", "info")
 
-	// Step 2.5: Check if this is first-time setup BEFORE starting containers
-	pbDataPath := filepath.Join(workDir, "pb_data", "data.db")
-	isFirstTimeSetup := false
-	if _, err := os.Stat(pbDataPath); os.IsNotExist(err) {
-		isFirstTimeSetup = true
-		s.logBuild(deployment.ID, "", "info")
-		s.logBuild(deployment.ID, "📝 First-time PocketBase deployment detected", "info")
-		s.logBuild(deployment.ID, "   You'll need to create an admin account after deployment", "info")
-		s.logBuild(deployment.ID, "", "info")
-	}
+		// Restart only the frontend container
+		s.logBuild(deployment.ID, "Restarting frontend container...", "info")
+		if err := s.dockerService.ComposeRestartService(ctx, workDir, projectName, "frontend"); err != nil {
+			return fmt.Errorf("failed to restart frontend: %w", err)
+		}
 
-	// Step 3: Start containers
-	deployment.Status = models.DeploymentDeploying
-	s.db.Save(&deployment)
-
-	s.logBuild(deployment.ID, "Starting containers...", "info")
-	s.logBuild(deployment.ID, "→ Starting PocketBase backend...", "info")
-	s.logBuild(deployment.ID, "→ Starting frontend (waiting for PocketBase health check)...", "info")
-
-	if err := s.dockerService.ComposeUp(ctx, workDir, projectName); err != nil {
-		return fmt.Errorf("failed to start containers: %w", err)
-	}
-
-	s.logBuild(deployment.ID, "✓ All containers started successfully", "info")
-
-	// Step 4: Configure Caddy reverse proxy for both services
-	s.logBuild(deployment.ID, "Configuring reverse proxy...", "info")
-	if err := s.caddyService.GenerateConfigWithPocketBase(project); err != nil {
-		return fmt.Errorf("failed to generate Caddy config: %w", err)
-	}
-
-	if err := s.caddyService.Reload(); err != nil {
-		s.logBuild(deployment.ID, fmt.Sprintf("Warning: failed to reload Caddy: %v", err), "warning")
+		s.logBuild(deployment.ID, "✓ Frontend restarted successfully", "info")
+		s.logBuild(deployment.ID, "✓ PocketBase backend remains running (no downtime)", "info")
 	} else {
-		s.logBuild(deployment.ID, "✓ Reverse proxy configured", "info")
+		// First deployment: build and start everything
+		s.logBuild(deployment.ID, "First deployment detected - setting up both frontend and backend", "info")
+
+		// Step 1: Stop and remove any existing containers (cleanup from failed deployments)
+		s.logBuild(deployment.ID, "Cleaning up any previous failed deployments...", "info")
+		if err := s.dockerService.ComposeDown(ctx, workDir, projectName); err != nil {
+			s.logBuild(deployment.ID, fmt.Sprintf("Note: %v (this is normal for first deployment)", err), "info")
+		}
+
+		// Step 2: Build images with docker-compose
+		s.logBuild(deployment.ID, "Building Docker images (frontend + PocketBase)...", "info")
+		s.logBuild(deployment.ID, "→ Downloading official PocketBase binary from GitHub...", "info")
+
+		logCallback := func(message string) {
+			s.logBuild(deployment.ID, message, "info")
+		}
+
+		if err := s.dockerService.ComposeBuild(ctx, workDir, projectName, logCallback); err != nil {
+			return fmt.Errorf("failed to build images: %w", err)
+		}
+
+		s.logBuild(deployment.ID, "✓ All images built successfully", "info")
+	}
+
+	// Step 2.5: Check if this is first-time setup BEFORE starting containers (only for first deployments)
+	var isFirstTimeSetup bool
+	var adminURL string
+
+	if !isRedeployment {
+		// Only start containers and configure Caddy for first deployments
+		pbDataPath := filepath.Join(workDir, "pb_data", "data.db")
+		if _, err := os.Stat(pbDataPath); os.IsNotExist(err) {
+			isFirstTimeSetup = true
+			s.logBuild(deployment.ID, "", "info")
+			s.logBuild(deployment.ID, "📝 First-time PocketBase deployment detected", "info")
+			s.logBuild(deployment.ID, "   You'll need to create an admin account after deployment", "info")
+			s.logBuild(deployment.ID, "", "info")
+		}
+
+		// Step 3: Start containers
+		deployment.Status = models.DeploymentDeploying
+		s.db.Save(&deployment)
+
+		s.logBuild(deployment.ID, "Starting containers...", "info")
+		s.logBuild(deployment.ID, "→ Starting PocketBase backend...", "info")
+		s.logBuild(deployment.ID, "→ Starting frontend (waiting for PocketBase health check)...", "info")
+
+		if err := s.dockerService.ComposeUp(ctx, workDir, projectName); err != nil {
+			return fmt.Errorf("failed to start containers: %w", err)
+		}
+
+		s.logBuild(deployment.ID, "✓ All containers started successfully", "info")
+
+		// Step 4: Configure Caddy reverse proxy for both services
+		s.logBuild(deployment.ID, "Configuring reverse proxy...", "info")
+		if err := s.caddyService.GenerateConfigWithPocketBase(project); err != nil {
+			return fmt.Errorf("failed to generate Caddy config: %w", err)
+		}
+
+		if err := s.caddyService.Reload(); err != nil {
+			s.logBuild(deployment.ID, fmt.Sprintf("Warning: failed to reload Caddy: %v", err), "warning")
+		} else {
+			s.logBuild(deployment.ID, "✓ Reverse proxy configured", "info")
+		}
 	}
 
 	// Step 5: Display deployment information
-	var adminURL string
 	for _, domain := range project.Domains {
 		if domain.IsActive {
 			protocol := "https"
