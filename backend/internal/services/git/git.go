@@ -92,6 +92,50 @@ func (s *GitService) Pull(repoPath string, opts CloneOptions) error {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
 
+	// Clean up Docker-generated directories before pulling to avoid permission issues
+	// These directories are typically created by containers and should be gitignored
+	dockerDirs := []string{
+		"pb_data",           // PocketBase data (created by PocketBase container)
+		"node_modules",      // Node.js dependencies
+		".next",             // Next.js build output
+		"dist",              // Build output
+		"build",             // Build output
+		".svelte-kit",       // SvelteKit build output
+		".nuxt",             // Nuxt build output
+		".output",           // Nitro/Nuxt output
+	}
+
+	// Clean up directories in both repo root and common subdirectories
+	searchPaths := []string{
+		".",                  // Repo root
+		"frontend",           // Common frontend directory
+		"backend",            // Common backend directory
+		"server",             // Common server directory
+		"client",             // Common client directory
+	}
+
+	for _, searchPath := range searchPaths {
+		for _, dir := range dockerDirs {
+			var dirPath string
+			if searchPath == "." {
+				dirPath = filepath.Join(repoPath, dir)
+			} else {
+				dirPath = filepath.Join(repoPath, searchPath, dir)
+			}
+
+			if _, err := os.Stat(dirPath); err == nil {
+				// Directory exists - try to remove it
+				fmt.Printf("Cleaning up Docker-generated directory: %s\n", dirPath)
+				if removeErr := forceRemoveAll(dirPath); removeErr != nil {
+					// Log warning but don't fail the deployment
+					fmt.Printf("Warning: Could not remove %s: %v\n", dirPath, removeErr)
+				} else {
+					fmt.Printf("✓ Cleaned up: %s\n", dirPath)
+				}
+			}
+		}
+	}
+
 	pullOpts := &git.PullOptions{
 		RemoteName: "origin",
 		Progress:   os.Stdout,
@@ -117,6 +161,28 @@ func (s *GitService) Pull(repoPath string, opts CloneOptions) error {
 	}
 
 	return nil
+}
+
+// forceRemoveAll forcefully removes a directory and its contents, handling permission issues
+func forceRemoveAll(path string) error {
+	// First try normal removal
+	err := os.RemoveAll(path)
+	if err == nil {
+		return nil
+	}
+
+	// If that fails, try to chmod recursively then remove
+	_ = filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil // Continue even if we can't access some files
+		}
+		// Try to make everything writable
+		_ = os.Chmod(filePath, 0777)
+		return nil
+	})
+
+	// Try removing again after chmod
+	return os.RemoveAll(path)
 }
 
 func (s *GitService) GetLatestCommit(repoPath string) (*CommitInfo, error) {
