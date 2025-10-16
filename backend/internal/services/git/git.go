@@ -92,17 +92,32 @@ func (s *GitService) Pull(repoPath string, opts CloneOptions) error {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	// Clean up runtime data directory before pulling to avoid permission issues
-	// This directory contains Docker volumes, PocketBase data, build outputs, etc.
-	runtimeDir := filepath.Join(repoPath, ".runtime")
-	if _, err := os.Stat(runtimeDir); err == nil {
-		// Directory exists - try to remove it
-		fmt.Printf("Cleaning up runtime data directory: %s\n", runtimeDir)
-		if removeErr := forceRemoveAll(runtimeDir); removeErr != nil {
-			// Log warning but don't fail the deployment
-			fmt.Printf("Warning: Could not remove runtime directory: %v\n", removeErr)
-		} else {
-			fmt.Printf("✓ Cleaned up runtime directory\n")
+	// Clean up OLD data directories that may have been committed to Git
+	// before the .runtime/ structure was implemented.
+	// These can cause permission issues during git pull.
+	// NOTE: We do NOT remove .runtime/ - it's gitignored and contains persistent data!
+	oldDirs := []string{
+		"pb_data",           // Old PocketBase data location
+		"node_modules",      // Node.js dependencies (sometimes accidentally committed)
+		".next",             // Next.js build output
+		"dist",              // Build output
+		"build",             // Build output
+		".svelte-kit",       // SvelteKit build output
+		".nuxt",             // Nuxt build output
+		".output",           // Nitro/Nuxt output
+	}
+
+	for _, dir := range oldDirs {
+		dirPath := filepath.Join(repoPath, dir)
+		if _, err := os.Stat(dirPath); err == nil {
+			// Directory exists - try to remove it
+			fmt.Printf("Cleaning up old directory from Git: %s\n", dirPath)
+			if removeErr := forceRemoveAll(dirPath); removeErr != nil {
+				// Log warning but don't fail the deployment
+				fmt.Printf("Warning: Could not remove %s: %v\n", dirPath, removeErr)
+			} else {
+				fmt.Printf("✓ Cleaned up: %s\n", dirPath)
+			}
 		}
 	}
 
