@@ -151,7 +151,9 @@ CMD ["/pb/pocketbase", "serve", \
 }
 
 // generateDockerCompose generates a docker-compose.yml for projects with PocketBase
-func (s *DeploymentService) generateDockerCompose(project *models.Project, deploymentDomain string) string {
+// frontendDir: absolute path to frontend directory
+// pocketbaseDir: absolute path to repo root (where docker-compose.yml will be)
+func (s *DeploymentService) generateDockerCompose(project *models.Project, deploymentDomain string, frontendDir string, pocketbaseDir string) string {
 	projectName := sanitizeProjectName(project.Name)
 	projectID := project.ID
 
@@ -169,6 +171,18 @@ func (s *DeploymentService) generateDockerCompose(project *models.Project, deplo
 	}
 
 	pocketbaseURL := fmt.Sprintf("%s://%s", protocol, deploymentDomain)
+
+	// Calculate relative path from pocketbaseDir to frontendDir for build context
+	// If frontendDir is /path/to/repo/frontend and pocketbaseDir is /path/to/repo,
+	// then frontendBuildContext should be "./frontend"
+	frontendBuildContext := "."
+	if frontendDir != pocketbaseDir {
+		// Extract the relative path
+		relPath, err := filepath.Rel(pocketbaseDir, frontendDir)
+		if err == nil && relPath != "." {
+			frontendBuildContext = "./" + filepath.ToSlash(relPath)
+		}
+	}
 
 	return fmt.Sprintf(`version: '3.8'
 
@@ -212,7 +226,7 @@ services:
   # Frontend Service
   frontend:
     build:
-      context: .
+      context: %s
       dockerfile: Dockerfile
       args:
         # Inject PocketBase URL at build time
@@ -245,6 +259,7 @@ networks:
 		pocketbaseContainerName,
 		project.BackendPort,
 		pocketbaseURL,
+		frontendBuildContext,
 		pocketbaseURL,
 		frontendContainerName,
 		pocketbaseURL,
@@ -346,7 +361,9 @@ func sanitizeProjectName(name string) string {
 }
 
 // generatePocketBaseDeploymentFiles creates all necessary files for PocketBase deployment
-func (s *DeploymentService) generatePocketBaseDeploymentFiles(workDir string, project *models.Project, deploymentID uint) error {
+// pocketbaseDir: repo root where PocketBase files will be created
+// frontendDir: directory containing frontend code (may be a subdirectory for monorepos)
+func (s *DeploymentService) generatePocketBaseDeploymentFiles(pocketbaseDir, frontendDir string, project *models.Project, deploymentID uint) error {
 	// Get deployment domain
 	deploymentDomain := ""
 	for _, domain := range project.Domains {
@@ -358,36 +375,36 @@ func (s *DeploymentService) generatePocketBaseDeploymentFiles(workDir string, pr
 
 	s.logBuild(deploymentID, "Generating PocketBase deployment files...", "info")
 
-	// 1. Generate frontend Dockerfile (using existing logic)
+	// 1. Generate frontend Dockerfile in the frontend directory
 	s.logBuild(deploymentID, "Creating frontend Dockerfile...", "info")
-	if err := s.ensureDockerfile(workDir, project); err != nil {
+	if err := s.ensureDockerfile(frontendDir, project); err != nil {
 		return fmt.Errorf("failed to create frontend Dockerfile: %w", err)
 	}
 
-	// 2. Generate PocketBase Dockerfile
+	// 2. Generate PocketBase Dockerfile at repo root
 	s.logBuild(deploymentID, "Fetching latest PocketBase version from GitHub...", "info")
 	pbVersion := getPocketBaseVersion()
 	s.logBuild(deploymentID, fmt.Sprintf("Using PocketBase version: %s", pbVersion), "info")
 
 	s.logBuild(deploymentID, "Creating PocketBase Dockerfile from official GitHub binary...", "info")
 	pocketbaseDockerfile := s.generatePocketBaseDockerfile(pbVersion)
-	pocketbaseDockerfilePath := filepath.Join(workDir, "Dockerfile.pocketbase")
+	pocketbaseDockerfilePath := filepath.Join(pocketbaseDir, "Dockerfile.pocketbase")
 	if err := os.WriteFile(pocketbaseDockerfilePath, []byte(pocketbaseDockerfile), 0644); err != nil {
 		return fmt.Errorf("failed to write PocketBase Dockerfile: %w", err)
 	}
 	s.logBuild(deploymentID, "✓ PocketBase Dockerfile created (downloads official binary)", "info")
 
-	// 3. Generate docker-compose.yml
+	// 3. Generate docker-compose.yml at repo root with correct build contexts
 	s.logBuild(deploymentID, "Creating docker-compose.yml for multi-container deployment...", "info")
-	dockerCompose := s.generateDockerCompose(project, deploymentDomain)
-	dockerComposePath := filepath.Join(workDir, "docker-compose.yml")
+	dockerCompose := s.generateDockerCompose(project, deploymentDomain, frontendDir, pocketbaseDir)
+	dockerComposePath := filepath.Join(pocketbaseDir, "docker-compose.yml")
 	if err := os.WriteFile(dockerComposePath, []byte(dockerCompose), 0644); err != nil {
 		return fmt.Errorf("failed to write docker-compose.yml: %w", err)
 	}
 	s.logBuild(deploymentID, "✓ docker-compose.yml created", "info")
 
-	// 4. Create .env file with PocketBase encryption key if not exists
-	envPath := filepath.Join(workDir, ".env")
+	// 4. Create .env file at repo root with PocketBase encryption key if not exists
+	envPath := filepath.Join(pocketbaseDir, ".env")
 	envContent, _ := os.ReadFile(envPath)
 	if !containsString(string(envContent), "PB_ENCRYPTION_KEY") {
 		// Generate a random encryption key for PocketBase
@@ -438,7 +455,9 @@ func generateRandomKey(length int) string {
 }
 
 // deployWithDockerCompose handles deployment using docker-compose for multi-container projects
-func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deployment *models.Deployment, project *models.Project, workDir string) error {
+// pocketbaseDir: repo root where docker-compose.yml is located
+// frontendDir: directory containing frontend code
+func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deployment *models.Deployment, project *models.Project, pocketbaseDir string, frontendDir string) error {
 	s.logBuild(deployment.ID, "Starting multi-container deployment with docker-compose...", "info")
 
 	projectName := fmt.Sprintf("vps-panel-project-%d", project.ID)
@@ -456,9 +475,9 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 			s.logBuild(deployment.ID, message, "info")
 		}
 
-		// Build only the frontend service
+		// Build only the frontend service (docker-compose is at repo root)
 		s.logBuild(deployment.ID, "Building frontend Docker image...", "info")
-		if err := s.dockerService.ComposeBuildService(ctx, workDir, projectName, "frontend", logCallback); err != nil {
+		if err := s.dockerService.ComposeBuildService(ctx, pocketbaseDir, projectName, "frontend", logCallback); err != nil {
 			return fmt.Errorf("failed to build frontend image: %w", err)
 		}
 
@@ -466,7 +485,7 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 
 		// Restart only the frontend container
 		s.logBuild(deployment.ID, "Restarting frontend container...", "info")
-		if err := s.dockerService.ComposeRestartService(ctx, workDir, projectName, "frontend"); err != nil {
+		if err := s.dockerService.ComposeRestartService(ctx, pocketbaseDir, projectName, "frontend"); err != nil {
 			return fmt.Errorf("failed to restart frontend: %w", err)
 		}
 
@@ -478,7 +497,7 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 
 		// Step 1: Stop and remove any existing containers (cleanup from failed deployments)
 		s.logBuild(deployment.ID, "Cleaning up any previous failed deployments...", "info")
-		if err := s.dockerService.ComposeDown(ctx, workDir, projectName); err != nil {
+		if err := s.dockerService.ComposeDown(ctx, pocketbaseDir, projectName); err != nil {
 			s.logBuild(deployment.ID, fmt.Sprintf("Note: %v (this is normal for first deployment)", err), "info")
 		}
 
@@ -490,7 +509,7 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 			s.logBuild(deployment.ID, message, "info")
 		}
 
-		if err := s.dockerService.ComposeBuild(ctx, workDir, projectName, logCallback); err != nil {
+		if err := s.dockerService.ComposeBuild(ctx, pocketbaseDir, projectName, logCallback); err != nil {
 			return fmt.Errorf("failed to build images: %w", err)
 		}
 
@@ -503,7 +522,8 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 
 	if !isRedeployment {
 		// Only start containers and configure Caddy for first deployments
-		pbDataPath := filepath.Join(workDir, "pb_data", "data.db")
+		// pb_data is now at repo root, not in frontend directory
+		pbDataPath := filepath.Join(pocketbaseDir, "pb_data", "data.db")
 		if _, err := os.Stat(pbDataPath); os.IsNotExist(err) {
 			isFirstTimeSetup = true
 			s.logBuild(deployment.ID, "", "info")
@@ -520,7 +540,7 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 		s.logBuild(deployment.ID, "→ Starting PocketBase backend...", "info")
 		s.logBuild(deployment.ID, "→ Starting frontend (waiting for PocketBase health check)...", "info")
 
-		if err := s.dockerService.ComposeUp(ctx, workDir, projectName); err != nil {
+		if err := s.dockerService.ComposeUp(ctx, pocketbaseDir, projectName); err != nil {
 			return fmt.Errorf("failed to start containers: %w", err)
 		}
 

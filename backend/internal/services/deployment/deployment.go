@@ -174,19 +174,25 @@ func (s *DeploymentService) executeDeployment(ctx context.Context, deployment *m
 	// Check if project uses PocketBase - if so, use docker-compose multi-container setup
 	if project.BaaSType == models.BaaSPocketBase {
 		s.logBuild(deployment.ID, "Detected PocketBase backend - using multi-container deployment", "info")
+		s.logBuild(deployment.ID, "PocketBase files will be created at repo root to keep frontend directory clean", "info")
 
-		// Ensure PocketBase directory structure
-		if err := s.ensurePocketBaseStructure(workDir, deployment.ID); err != nil {
+		// PocketBase files should be at repo root, not inside frontend directory
+		// This keeps the frontend directory clean and avoids Git permission issues
+		pocketbaseDir := repoPath
+
+		// Ensure PocketBase directory structure at repo root
+		if err := s.ensurePocketBaseStructure(pocketbaseDir, deployment.ID); err != nil {
 			return fmt.Errorf("failed to setup PocketBase structure: %w", err)
 		}
 
-		// Generate docker-compose.yml for multi-container deployment
-		if err := s.generatePocketBaseDeploymentFiles(workDir, project, deployment.ID); err != nil {
+		// Generate docker-compose.yml and related files at repo root
+		// Pass both repoPath (for docker-compose) and workDir (for frontend context)
+		if err := s.generatePocketBaseDeploymentFiles(repoPath, workDir, project, deployment.ID); err != nil {
 			return fmt.Errorf("failed to generate PocketBase deployment files: %w", err)
 		}
 
-		// Deploy using docker-compose
-		return s.deployWithDockerCompose(ctx, deployment, project, workDir)
+		// Deploy using docker-compose (docker-compose.yml is at repo root)
+		return s.deployWithDockerCompose(ctx, deployment, project, repoPath, workDir)
 	}
 
 	// For non-PocketBase projects, use single container deployment
