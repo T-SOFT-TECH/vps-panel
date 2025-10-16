@@ -203,8 +203,8 @@ services:
       # Bind to localhost only for security (Caddy will proxy)
       - "127.0.0.1:%d:8090"
     volumes:
-      # Persistent data storage
-      - ./pb_data:/pb/pb_data
+      # Persistent data storage (organized in .runtime folder)
+      - ./.runtime/pb_data:/pb/pb_data
       # Database migrations (auto-run on startup)
       - ./pb_migrations:/pb/pb_migrations:ro
       # Custom hooks (Go/JavaScript)
@@ -272,10 +272,16 @@ networks:
 func (s *DeploymentService) ensurePocketBaseStructure(workDir string, deploymentID uint) error {
 	s.logBuild(deploymentID, "Setting up PocketBase project structure...", "info")
 
+	// Create .runtime directory for all runtime data
+	runtimeDir := filepath.Join(workDir, ".runtime")
+	if err := os.MkdirAll(runtimeDir, 0755); err != nil {
+		return fmt.Errorf("failed to create .runtime directory: %w", err)
+	}
+
 	// IMPORTANT: Remove any pb_data that came from the Git repository
 	// Developers often accidentally commit their development database to Git
 	// This ensures we always start with a fresh PocketBase instance
-	pbDataDir := filepath.Join(workDir, "pb_data")
+	pbDataDir := filepath.Join(runtimeDir, "pb_data")
 	pbDataDB := filepath.Join(pbDataDir, "data.db")
 
 	if _, err := os.Stat(pbDataDB); err == nil {
@@ -323,20 +329,44 @@ func (s *DeploymentService) ensurePocketBaseStructure(workDir string, deployment
 		}
 	}
 
-	// Create .gitignore for pb_data if it doesn't exist
+	// Ensure .gitignore has runtime directory entry (append if file exists)
 	gitignorePath := filepath.Join(workDir, ".gitignore")
-	gitignoreContent := `
-# PocketBase data directory (contains database and uploads)
-pb_data/
+	pocketbaseIgnoreEntries := `
+# Runtime data (Docker volumes, PocketBase data, etc.)
+.runtime/
 
 # Backup files
 *.db-shm
 *.db-wal
 `
 
-	if _, err := os.Stat(gitignorePath); os.IsNotExist(err) {
-		if err := os.WriteFile(gitignorePath, []byte(gitignoreContent), 0644); err != nil {
+	// Check if .gitignore exists
+	existingContent, err := os.ReadFile(gitignorePath)
+	if err == nil {
+		// File exists - check if it already has .runtime/
+		contentStr := string(existingContent)
+		if !strings.Contains(contentStr, ".runtime/") {
+			// Append runtime directory entry
+			f, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_WRONLY, 0644)
+			if err != nil {
+				s.logBuild(deploymentID, "Warning: could not update .gitignore", "warning")
+			} else {
+				defer f.Close()
+				if _, err := f.WriteString(pocketbaseIgnoreEntries); err != nil {
+					s.logBuild(deploymentID, "Warning: could not append to .gitignore", "warning")
+				} else {
+					s.logBuild(deploymentID, "✓ Added .runtime directory to existing .gitignore", "info")
+				}
+			}
+		} else {
+			s.logBuild(deploymentID, ".gitignore already contains .runtime entry", "info")
+		}
+	} else {
+		// File doesn't exist - create it
+		if err := os.WriteFile(gitignorePath, []byte(pocketbaseIgnoreEntries), 0644); err != nil {
 			s.logBuild(deploymentID, "Warning: could not create .gitignore", "warning")
+		} else {
+			s.logBuild(deploymentID, "✓ Created .gitignore with PocketBase entries", "info")
 		}
 	}
 
@@ -522,8 +552,8 @@ func (s *DeploymentService) deployWithDockerCompose(ctx context.Context, deploym
 
 	if !isRedeployment {
 		// Only start containers and configure Caddy for first deployments
-		// pb_data is now at repo root, not in frontend directory
-		pbDataPath := filepath.Join(pocketbaseDir, "pb_data", "data.db")
+		// pb_data is now in .runtime folder
+		pbDataPath := filepath.Join(pocketbaseDir, ".runtime", "pb_data", "data.db")
 		if _, err := os.Stat(pbDataPath); os.IsNotExist(err) {
 			isFirstTimeSetup = true
 			s.logBuild(deployment.ID, "", "info")

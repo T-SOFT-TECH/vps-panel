@@ -56,6 +56,9 @@ data/
 /projects/
 backend/data/projects/
 
+# Runtime data (Docker volumes, PocketBase data, etc.)
+.runtime/
+
 # Environment files
 .env
 .env.local

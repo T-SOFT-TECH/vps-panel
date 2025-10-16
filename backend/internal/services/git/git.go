@@ -92,47 +92,17 @@ func (s *GitService) Pull(repoPath string, opts CloneOptions) error {
 		return fmt.Errorf("failed to get worktree: %w", err)
 	}
 
-	// Clean up Docker-generated directories before pulling to avoid permission issues
-	// These directories are typically created by containers and should be gitignored
-	dockerDirs := []string{
-		"pb_data",           // PocketBase data (created by PocketBase container)
-		"node_modules",      // Node.js dependencies
-		".next",             // Next.js build output
-		"dist",              // Build output
-		"build",             // Build output
-		".svelte-kit",       // SvelteKit build output
-		".nuxt",             // Nuxt build output
-		".output",           // Nitro/Nuxt output
-	}
-
-	// Clean up directories in both repo root and common subdirectories
-	searchPaths := []string{
-		".",                  // Repo root
-		"frontend",           // Common frontend directory
-		"backend",            // Common backend directory
-		"server",             // Common server directory
-		"client",             // Common client directory
-	}
-
-	for _, searchPath := range searchPaths {
-		for _, dir := range dockerDirs {
-			var dirPath string
-			if searchPath == "." {
-				dirPath = filepath.Join(repoPath, dir)
-			} else {
-				dirPath = filepath.Join(repoPath, searchPath, dir)
-			}
-
-			if _, err := os.Stat(dirPath); err == nil {
-				// Directory exists - try to remove it
-				fmt.Printf("Cleaning up Docker-generated directory: %s\n", dirPath)
-				if removeErr := forceRemoveAll(dirPath); removeErr != nil {
-					// Log warning but don't fail the deployment
-					fmt.Printf("Warning: Could not remove %s: %v\n", dirPath, removeErr)
-				} else {
-					fmt.Printf("✓ Cleaned up: %s\n", dirPath)
-				}
-			}
+	// Clean up runtime data directory before pulling to avoid permission issues
+	// This directory contains Docker volumes, PocketBase data, build outputs, etc.
+	runtimeDir := filepath.Join(repoPath, ".runtime")
+	if _, err := os.Stat(runtimeDir); err == nil {
+		// Directory exists - try to remove it
+		fmt.Printf("Cleaning up runtime data directory: %s\n", runtimeDir)
+		if removeErr := forceRemoveAll(runtimeDir); removeErr != nil {
+			// Log warning but don't fail the deployment
+			fmt.Printf("Warning: Could not remove runtime directory: %v\n", removeErr)
+		} else {
+			fmt.Printf("✓ Cleaned up runtime directory\n")
 		}
 	}
 
